@@ -193,13 +193,44 @@ blocking ureq, so per-token latency is bounded by the engine. The frontend holds
 of the JSON reply and half an answer on screen reads worse than the wait. Raise
 `RAG_VISION_TIMEOUT` if the engine thinks slowly.
 
+## Connecting an inference engine (LM Studio and friends)
+
+Corpus ships no model server. Chat in the GUI and figure captioning both talk to an
+OpenAI-compatible HTTP server that you already run locally — LM Studio, mlx-serve,
+llama.cpp's `llama-server`, Ollama's OpenAI-compatible endpoint — anything that answers
+`/v1/chat/completions` (and, for captioning, accepts base64 images in the OpenAI
+vision format).
+
+Point Corpus at your engine in the GUI's vision settings (the Endpoint / Model / API key
+sheet); the values persist in `<data_dir>/vision.json`. With LM Studio, load a
+vision-language model, start the server on its default port, and fill in:
+
+- **Endpoint** `http://127.0.0.1:1234/v1` (LM Studio's default; mlx-serve uses
+  `:11234/v1`, llama-server `:8080/v1`)
+- **Model** the exact model id your engine reports
+- **API key** only if your server requires one (LM Studio does not by default)
+
+Then click **Test the model**: Corpus sends a real synthetic image and shows the reply,
+so you know the endpoint genuinely accepts images instead of trusting what it
+advertises. Captioning every figure page in an index takes minutes to hours the first
+time; afterwards captions are cached in `<data_dir>/captions.jsonl`.
+
+Chat uses the same endpoint and settings, so one engine serves both — a text-only model
+is enough for chat, a vision-language model for captioning. The environment variables
+below override the saved settings when a command needs different values.
+
+One rule guards both paths: the endpoint must be loopback, a private range, or a
+`.local` name. Anything else — including the public internet — is refused before the
+image or question leaves the machine. An engine on another machine in your home network
+works; a hosted API does not.
+
 ## Environment variables
 
 | Variable | Purpose |
 | --- | --- |
 | `RAG_DATA_DIR` | Moves models, index, settings, caption cache and PDFium lookup |
-| `RAG_VISION_URL` | Vision endpoint; default `http://127.0.0.1:11234/v1` |
-| `RAG_VISION_MODEL` | Vision model id; defaults to the mlx-serve model |
+| `RAG_VISION_URL` | Vision and chat endpoint (OpenAI-compatible); default `http://127.0.0.1:11234/v1` |
+| `RAG_VISION_MODEL` | Model id, as your engine reports it; set in the GUI's vision settings or here |
 | `RAG_VISION_KEY` | Bearer token, if the endpoint needs one |
 | `RAG_VISION_TIMEOUT` | Per-request timeout in seconds |
 | `RAG_PDFIUM_PATH` | Where to load PDFium from, instead of `<data_dir>/pdfium` |
@@ -224,22 +255,31 @@ tail -f /tmp/corpus-gui.log          # stderr of the window launched from a shel
 ## Using the MCP server from a client
 
 `corpus-mcp` speaks MCP over stdio and exposes two tools: `search_docs` (fused lexical +
-dense search, optional rerank and exact-filename filter) and `list_documents`. Register it
-in your client's config (paths vary by client):
+dense search, optional rerank and exact-filename filter) and `list_documents`. It needs
+no inference engine — both tools run entirely against the local index, so any MCP client
+connects to it as-is, with no model, API key or engine setup on Corpus's side.
+
+Most clients that follow the standard `mcpServers` convention (Claude Desktop's
+`claude_desktop_config.json`, pi's `universal_mcp_servers.json`, and others) accept a
+block like:
 
 ```json
 {
   "mcpServers": {
     "corpus": {
       "transport": "stdio",
-      "command": "/path/to/this/repo/target/release/corpus-mcp",
+      "command": "/path/to/Corpus/target/release/corpus-mcp",
       "args": [],
-      "enabled": true,
       "timeout": 180
     }
   }
 }
 ```
+
+Point `command` at wherever Corpus lives on your machine — the `.app` bundle contains
+the same binary under `Contents/MacOS/`. The client's `search_docs` calls answer from
+whatever documents you indexed; add documents through the GUI (or the CLI's
+`corpus index`) first.
 
 ## Notes on distribution
 
