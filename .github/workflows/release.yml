@@ -23,7 +23,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - name: Install tauri-cli
-        run: cargo install tauri-cli --version 2 --locked
+        run: cargo install tauri-cli --locked
       - name: Build the app bundle and dmg
         run: cargo tauri build
       - name: Package the CLI zip
