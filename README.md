@@ -7,6 +7,13 @@ stdio. Nothing leaves the machine: models run locally, the index lives in one da
 directory, and any LLM endpoint the app talks to is restricted to loopback or private
 network addresses before an image or question is sent.
 
+Corpus is built for corpora that live on your own disk — regulation manuals, standards,
+papers — where answers must cite the page they came from. Embedding, reranking and
+figure captioning all run locally under ONNX Runtime: the models, about 562 MB in
+total, are downloaded automatically on first run and cached in the data directory, so
+after that everything is offline and instant. There is no cloud service, no account, no
+telemetry.
+
 ## Layout
 
 The workspace has four crates:
@@ -21,26 +28,71 @@ The workspace has four crates:
 No bundler, no dev server — the UI is plain files under `crates/gui/ui` embedded into the
 binary at build time.
 
-## Getting the source and staying current
+## Installing on macOS
+
+Corpus has no installer and no bundle — it builds from source, which takes a few
+minutes.
 
 ```bash
+# 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
+curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
+
+# 2. Clone and build
 git clone https://github.com/pxzundev/Corpus.git
 cd Corpus
-git pull          # pick up changes later
+cargo build --release --workspace
+
+# 3. Run
+./target/release/corpus-gui        # the desktop window
+./target/release/corpus --help     # the CLI: probe | index | search | list
 ```
 
-## Prerequisites
+On first run the embedding and reranking models download automatically (~562 MB in
+total; ONNX Runtime ships as prebuilt binaries). Warm them before opening the window
+with `./target/release/corpus probe`. After that the models are cached in the data
+directory and everything runs offline.
 
-- A recent stable Rust toolchain (the workspace uses edition 2024).
-- The Tauri CLI at `~/.cargo/bin/cargo-tauri` (`cargo install tauri-cli`) — only needed for
-  `cargo tauri dev` / `cargo tauri build`.
-- Node + npm — only needed to run the UI tests (`npm install` once, then `npm test`).
-- On first query, the embedding and reranking models download (~562 MB total, ONNX
-  Runtime ships as prebuilt binaries). Do the download once up front with `probe` (below).
-- PDFium: for rendering and figure captioning the app needs an arch-matched `libpdfium`
-  in `<data_dir>/pdfium` (from [bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries),
-  e.g. asset `pdfium-mac-arm64.tgz`), or point `RAG_PDFIUM_PATH` at one. Without it, the
-  app still works text-only.
+For figure captioning you also need PDFium: grab an arch-matched binary from
+[bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries) —
+`pdfium-mac-arm64.tgz` on Apple silicon, `pdfium-mac-x64.tgz` on Intel — and put
+`libpdfium.dylib` in `~/Library/Application Support/Corpus/pdfium/`, or point
+`RAG_PDFIUM_PATH` at it. Without PDFium the app still works text-only.
+
+Optional: `cargo install tauri-cli` for `cargo tauri dev` / `cargo tauri build`, and
+Node + npm for the UI tests (`npm install` once, then `npm test`).
+
+To pick up changes later: `git pull && cargo build --release --workspace`.
+
+## Installing on Windows
+
+Same story — build from source. These steps assume PowerShell.
+
+```powershell
+# 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
+winget install Rustlang.Rustup     # or download rustup-init.exe from https://rustup.rs
+
+# 2. Clone and build
+git clone https://github.com/pxzundev/Corpus.git
+cd Corpus
+cargo build --release --workspace
+
+# 3. Run
+.\target\release\corpus-gui.exe     # the desktop window
+.\target\release\corpus.exe --help  # the CLI: probe | index | search | list
+```
+
+On first run the embedding and reranking models download automatically (~562 MB in
+total). Warm them before opening the window with `.\target\release\corpus.exe probe`.
+The window needs the WebView2 runtime, preinstalled on Windows 11 (on Windows 10,
+install it from Microsoft if it is missing).
+
+For figure captioning you also need PDFium: download `pdfium-windows-x64.tgz` from
+[bblanchon/pdfium-binaries](https://github.com/bblanchon/pdfium-binaries) and put
+`libpdfium.dll` in `%APPDATA%\Corpus\pdfium\`, or point `RAG_PDFIUM_PATH` at it.
+Without PDFium the app still works text-only. The data directory lives at
+`%APPDATA%\Corpus`.
+
+To pick up changes later: `git pull && cargo build --release --workspace`.
 
 ## Data dir
 
@@ -189,10 +241,9 @@ in your client's config (paths vary by client):
 
 ## Notes on distribution
 
-There is no installer. `bundle.active` is `false` in `tauri.conf.json`, so nothing
-produces a `.app`, `.dmg`, `.msi` or `.deb` — another machine builds from source, downloads
-562 MB of models on first query, and places an arch-matched `libpdfium` by hand or runs
-text-only.
+`bundle.active` is `false` in `tauri.conf.json`, so nothing produces a `.app`, `.dmg`,
+`.msi` or `.deb`. There is no installer — see the install sections above for the
+build-from-source steps on macOS and Windows.
 
 ## License
 
