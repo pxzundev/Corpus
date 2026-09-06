@@ -32,7 +32,10 @@ binary at build time.
 
 Two ways in. The easy way: download `Corpus_0.1.0_aarch64.dmg` from the
 [releases page](https://github.com/pxzundev/Corpus/releases), open it, and drag
-`Corpus.app` into Applications. To build from source instead — a few minutes:
+`Corpus.app` into Applications. The bundle installs the GUI only; the CLI tools
+(`corpus`, `corpus-mcp`) ship separately in the same release's zip — see
+[Using the MCP server from a client](#using-the-mcp-server-from-a-client) below.
+To build from source instead — a few minutes:
 
 ```bash
 # 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
@@ -67,7 +70,9 @@ To pick up changes later: `git pull && cargo build --release --workspace`.
 
 ## Installing on Windows
 
-Same story — build from source. These steps assume PowerShell.
+Same story — build from source. These steps assume PowerShell. (A downloaded
+release zip with `install.ps1` inside can place `corpus` and `corpus-mcp` for you
+without any build — see [Using the MCP server from a client](#using-the-mcp-server-from-a-client).)
 
 ```powershell
 # 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
@@ -257,28 +262,46 @@ tail -f /tmp/corpus-gui.log          # stderr of the window launched from a shel
 `corpus-mcp` speaks MCP over stdio and exposes two tools: `search_docs` (fused lexical +
 dense search, optional rerank and exact-filename filter) and `list_documents`. It needs
 no inference engine — both tools run entirely against the local index, so any MCP client
-connects to it as-is, with no model, API key or engine setup on Corpus's side.
+connects to it as-is, with no model, API key or engine setup on Corpus's side. The two
+binaries are not inside the `.app` bundle, so install them first with the folder-picking
+installer:
 
-Most clients that follow the standard `mcpServers` convention (Claude Desktop's
-`claude_desktop_config.json`, pi's `universal_mcp_servers.json`, and others) accept a
-block like:
+```bash
+# macOS and Linux: asks where to put them, copies, prints the JSON below
+curl -fsSL https://raw.githubusercontent.com/pxzundev/Corpus/main/scripts/install.sh | bash
+# or, from a repo checkout or the release zip:
+bash scripts/install.sh
+```
+
+```powershell
+# Windows: same, folder prompt included
+.\scripts\install.ps1
+```
+
+Then add the printed block to your client's `mcpServers` config (pi, Claude Desktop,
+and other clients that follow the convention):
 
 ```json
 {
   "mcpServers": {
+    "local-web-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
     "corpus": {
       "transport": "stdio",
-      "command": "/path/to/Corpus/target/release/corpus-mcp",
+      "command": "/usr/local/bin/corpus-mcp",
       "args": [],
+      "enabled": true,
       "timeout": 180
     }
   }
 }
 ```
 
-Point `command` at wherever Corpus lives on your machine — the `.app` bundle contains
-the same binary under `Contents/MacOS/`. The client's `search_docs` calls answer from
-whatever documents you indexed; add documents through the GUI (or the CLI's
+The installer fills in `command` with the folder you chose; clients that only want
+`command` and `args` ignore the extra fields. The client's `search_docs` calls answer
+from whatever documents you indexed; add documents through the GUI (or the CLI's
 `corpus index`) first.
 
 ## Notes on distribution
