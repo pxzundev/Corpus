@@ -25,13 +25,14 @@ The workspace has four crates:
 | `crates/mcp` (`corpus-mcp`) | `corpus-mcp` | MCP server over stdio exposing `search_docs` and `list_documents` |
 | `crates/gui` (`corpus-gui`) | `corpus-gui` | Tauri 2 desktop app: browse the index, add and remove documents, inspect chunks, chat |
 
-No bundler, no dev server — the UI is plain files under `crates/gui/ui` embedded into the
+No dev server — the UI is plain files under `crates/gui/ui` embedded into the
 binary at build time.
 
 ## Installing on macOS
 
-Corpus has no installer and no bundle — it builds from source, which takes a few
-minutes.
+Two ways in. The easy way: download `Corpus_0.1.0_aarch64.dmg` from the
+[releases page](https://github.com/pxzundev/Corpus/releases), open it, and drag
+`Corpus.app` into Applications. To build from source instead — a few minutes:
 
 ```bash
 # 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
@@ -40,11 +41,12 @@ curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh
 # 2. Clone and build
 git clone https://github.com/pxzundev/Corpus.git
 cd Corpus
-cargo build --release --workspace
+cargo build --release --workspace   # CLI + MCP server + the GUI binary
+cargo tauri build                   # also Corpus.app and a .dmg in target/release/bundle
 
 # 3. Run
-./target/release/corpus-gui        # the desktop window
-./target/release/corpus --help     # the CLI: probe | index | search | list
+./target/release/corpus-gui                   # the desktop window (raw binary)
+open target/release/bundle/macos/Corpus.app   # or the bundled app
 ```
 
 On first run the embedding and reranking models download automatically (~562 MB in
@@ -131,7 +133,7 @@ cargo build --release --workspace
 ./target/release/corpus-gui        # window
 ./target/release/corpus --help     # CLI: probe | index | search | list
 ./target/release/corpus-mcp        # stdio MCP server
-cargo tauri build --no-bundle      # build without bundling (bundle.active is still false)
+cargo tauri build --no-bundle      # build the GUI binary without bundling
 ```
 
 ## Tests
@@ -241,9 +243,11 @@ in your client's config (paths vary by client):
 
 ## Notes on distribution
 
-`bundle.active` is `false` in `tauri.conf.json`, so nothing produces a `.app`, `.dmg`,
-`.msi` or `.deb`. There is no installer — see the install sections above for the
-build-from-source steps on macOS and Windows.
+`bundle.active` is `true` with targets `app` and `dmg`, so on macOS `cargo tauri build`
+produces `Corpus.app` and `Corpus_0.1.0_aarch64.dmg` under `target/release/bundle/`.
+The bundle is ad-hoc signed (no developer certificate), so Gatekeeper asks for a
+confirm on first open — right-click → Open, once. Windows and Linux have no installer;
+build from source as above.
 
 ## License
 
