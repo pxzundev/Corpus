@@ -24,8 +24,8 @@ binary at build time.
 ## Getting the source and staying current
 
 ```bash
-git clone https://github.com/<owner>/rag-mcp-rs.git   # replace <owner> with the repo's owner
-cd rag-mcp-rs
+git clone https://github.com/pxzundev/Corpus.git
+cd Corpus
 git pull          # pick up changes later
 ```
 
