@@ -106,6 +106,61 @@ Without PDFium the app still works text-only. The data directory lives at
 
 To pick up changes later: `git pull && cargo build --release --workspace`.
 
+## Installing and running, plain English
+
+The short version, for anyone who just wants the app working:
+
+### macOS
+
+1. **Install.** Download `Corpus_0.1.0_aarch64.dmg` from the
+   [releases page](https://github.com/pxzundev/Corpus/releases), open it, and drag
+   `Corpus.app` into Applications. On first open, macOS asks to confirm the app
+   (right-click → Open, once) because it is not signed with a developer certificate.
+   That is the whole install — no scripts, no Terminal, nothing else.
+2. **Run the app.** Double-click Corpus. The embedding models (~562 MB) download
+   automatically on this first launch. Drag PDFs or folders into the window to index
+   them. The app also quietly copies its built-in `corpus-mcp` server into its data
+   folder (`~/Library/Application Support/Corpus/bin/corpus-mcp`) on this same first
+   launch — it just happens; there is nothing to see or do.
+3. **Connect the harness.** Click the **MCP** button in the Chat header. A sheet
+   shows the exact `mcpServers` JSON block for your machine, with the real server
+   path already filled in. Click **Copy JSON**, paste the block into your client's
+   `mcpServers` config (pi, Claude Desktop, and similar clients), and restart the
+   client. Its `search_docs` and `list_documents` tools now answer from the
+   documents you indexed in step 2 — no engine, API key or model is needed on this
+   side.
+4. **Optional: chat and vision.** These need a model, so run your own local engine
+   (LM Studio or similar) and point the app at it once in the Vision sheet.
+5. **Uninstall, someday.** Drag `Corpus.app` to the Trash, delete
+   `~/Library/Application Support/Corpus`, and remove the pasted block from your
+   client's config. Everything the app ever created lives in those two places.
+
+### Windows
+
+1. **Get the binaries.** The Windows release zip is planned for a later release; for
+   now, build from source following [Installing on Windows](#installing-on-windows)
+   above, or unzip a folder that contains `corpus-gui.exe`, `corpus.exe` and
+   `corpus-mcp.exe`.
+2. **Put the exe files somewhere.** Any folder works — say `Documents\Corpus` — or
+   run `install.ps1` for the CLI tools. No installation step is required for the
+   GUI: a folder with the exes in it is enough.
+3. **Run the app.** Double-click `corpus-gui.exe`. The WebView2 runtime it needs is
+   preinstalled on Windows 11 (on Windows 10, install it once from Microsoft). The
+   ~562 MB of models download on first launch, and you drag PDFs into the window to
+   index them.
+4. **The MCP connection happens automatically.** The app looks for
+   `corpus-mcp.exe` beside itself, copies it into `%APPDATA%\Corpus\bin`, and that
+   is where it stays — the same "you do nothing" behavior as macOS.
+5. **Connect the harness.** Click the **MCP** button in the Chat header — the sheet
+   shows the exact JSON with the real path. **Copy JSON**, paste it into your
+   client's `mcpServers` config, restart the client.
+6. **Uninstall.** Delete the exe folder, delete `%APPDATA%\Corpus` (models, index,
+   the copied MCP server — everything lives there), and remove the pasted block
+   from your client's config.
+
+The full technical detail for both platforms is in the sections above and in
+[Using the MCP server from a client](#using-the-mcp-server-from-a-client) below.
+
 ## Data dir
 
 Everything lives in one directory: `models/`, `index/`, `vision.json`, `captions.jsonl`,
