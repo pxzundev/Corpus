@@ -1,0 +1,1648 @@
+/* Corpus — warm paper theme.
+ *
+ * Type is a three-family system: serif (Iowan/Palatino/Georgia) for reading —
+ * the brand, chat answers, chunk text and dialog titles; sans (system) for
+ * every control, label and row; mono for data — ids, stats, counts and chips.
+ * One control height (--control-h), one spacing scale, one accent. */
+
+:root {
+  /* Warm paper palette: cream grounds, warm ink, one terracotta accent. */
+  --color-bg: #f5f3ec;
+  --color-sunk: #efece2;
+  --color-card: #fdfcf8;
+  --color-fg: #262521;
+  --color-muted-fg: #6f6c61;
+  --color-faint-fg: #98937f;
+  --color-border: #e3ded0;
+  --color-border-strong: #d5cfbd;
+  --color-accent: #bc5b34;
+  --color-accent-ink: #8c4122;
+  --color-accent-soft: #f1e3d8;
+  --color-destructive: #a93f35;
+  --color-destructive-deep: #8d322a;
+  --color-ok: #3e7c4f;
+  --color-code-bg: #2a2620;
+  --color-code-fg: #f2eee3;
+  --color-shadow: rgba(58, 48, 30, 0.14);
+  /* Text on a filled accent/destructive button, and the tinted chips and
+   * callouts the palette needs beyond the core roles. */
+  --color-on-accent: #fdfbf7;
+  --color-on-destructive: #fbf4f1;
+  --color-danger-tint: #f3e0dc;
+  --color-ok-tint: #e2ecdf;
+  --color-error-border: #e0c4bd;
+  --color-error-bg: #f7ece8;
+  --color-cite-hover: #e7cdbc;
+  --color-cited-bg: #faf1e9;
+  --color-figure-tint: #ece5d2;
+  --color-figure-ink: #7a6a35;
+  --color-answer-ink: #4d3a2c;
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia,
+    "Times New Roman", serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+    monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 10px;
+  --radius-sm: 7px;
+  --control-h: 34px;
+}
+
+/* Dark: a warm charcoal, not a grey inversion — the same terracotta accent
+   reads correctly on it. The media query follows the OS; a data-theme on
+   <html> ("light" or "dark") overrides it for a manual choice. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #1e1c18;
+    --color-sunk: #26231e;
+    --color-card: #2b2822;
+    --color-fg: #e8e4d8;
+    --color-muted-fg: #a8a291;
+    --color-faint-fg: #7c7666;
+    --color-border: #3a362d;
+    --color-border-strong: #4a4539;
+    --color-accent: #d1724a;
+    --color-accent-ink: #e08a63;
+    --color-accent-soft: #44352b;
+    --color-destructive: #c05a4e;
+    --color-destructive-deep: #a94a3e;
+    --color-ok: #79ab87;
+    --color-code-bg: #17140f;
+    --color-code-fg: #ece8db;
+    --color-shadow: rgba(0, 0, 0, 0.5);
+    --color-on-accent: #1c1207;
+    --color-on-destructive: #1c0b08;
+    --color-danger-tint: #472e2a;
+    --color-ok-tint: #2c3a2e;
+    --color-error-border: #6b4038;
+    --color-error-bg: #3c2823;
+    --color-cite-hover: #5a4433;
+    --color-cited-bg: #38301f;
+    --color-figure-tint: #3d3728;
+    --color-figure-ink: #c5b582;
+    --color-answer-ink: #d8c9ae;
+  }
+}
+
+html[data-theme="dark"] {
+  --color-bg: #1e1c18;
+  --color-sunk: #26231e;
+  --color-card: #2b2822;
+  --color-fg: #e8e4d8;
+  --color-muted-fg: #a8a291;
+  --color-faint-fg: #7c7666;
+  --color-border: #3a362d;
+  --color-border-strong: #4a4539;
+  --color-accent: #d1724a;
+  --color-accent-ink: #e08a63;
+  --color-accent-soft: #44352b;
+  --color-destructive: #c05a4e;
+  --color-destructive-deep: #a94a3e;
+  --color-ok: #79ab87;
+  --color-code-bg: #17140f;
+  --color-code-fg: #ece8db;
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-on-accent: #1c1207;
+  --color-on-destructive: #1c0b08;
+  --color-danger-tint: #472e2a;
+  --color-ok-tint: #2c3a2e;
+  --color-error-border: #6b4038;
+  --color-error-bg: #3c2823;
+  --color-cite-hover: #5a4433;
+  --color-cited-bg: #38302342;
+  --color-figure-tint: #3d3728;
+  --color-figure-ink: #c5b582;
+  --color-answer-ink: #d8c9ae;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Author display rules (.activity, .btn, .spinner...) override the UA's
+   [hidden] { display: none }, so a hidden attribute alone would show. */
+[hidden] {
+  display: none !important;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font: 13px/1.55 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--color-accent-soft);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- panes ---------- */
+
+.panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  /* Documents and chats are fixed furniture; chat is the working surface. */
+  grid-template-columns: minmax(280px, 26%) minmax(360px, 1fr) minmax(230px, 230px);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-bg);
+}
+
+.pane-docs,
+.pane-ask {
+  border-right: 1px solid var(--color-border);
+}
+
+.pane-title {
+  margin: 0;
+  font: 600 11px/1.4 var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-muted-fg);
+  flex: none;
+}
+
+/* One header bar per pane: same height, same bottom border. */
+.pane-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: calc(var(--control-h) + var(--space-3));
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pane-head .pane-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+/* Title plus its info chip, and the popover the chip opens. */
+.head-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.info-btn {
+  width: 20px;
+  height: 20px;
+  color: var(--color-faint-fg);
+}
+
+.info-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.info-btn:hover {
+  color: var(--color-accent);
+}
+
+.popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 264px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  box-shadow: 0 14px 36px var(--color-shadow);
+}
+
+.pane-empty {
+  margin: var(--space-6) auto;
+  max-width: 46ch;
+  padding: 0 var(--space-4);
+  color: var(--color-muted-fg);
+  font-size: 13px;
+  text-align: center;
+}
+
+.stats {
+  margin: 0;
+  color: var(--color-muted-fg);
+  font: 11px/1.6 var(--font-mono);
+}
+
+.count {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font: 11px/1.5 var(--font-mono);
+  color: var(--color-muted-fg);
+  flex: none;
+}
+
+/* ---------- buttons and controls ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-fg);
+  font: 500 13px/1 var(--font-sans);
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, transform 90ms ease;
+}
+
+.btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--color-sunk);
+  border-color: var(--color-faint-fg);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  color: var(--color-faint-fg);
+  cursor: default;
+}
+
+.btn-accent {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.btn-accent:hover:not(:disabled) {
+  background: var(--color-accent-ink);
+  border-color: var(--color-accent-ink);
+}
+
+.btn-destructive {
+  background: var(--color-destructive);
+  border-color: var(--color-destructive);
+  color: var(--color-on-destructive);
+}
+
+.btn-destructive:hover:not(:disabled) {
+  background: var(--color-destructive-deep);
+  border-color: var(--color-destructive-deep);
+}
+
+/* The send button mid-flight: same footprint, stop semantics. */
+.btn-stop {
+  background: var(--color-destructive);
+  border-color: var(--color-destructive);
+  color: var(--color-on-accent);
+}
+
+.btn-stop:hover:not(:disabled) {
+  background: var(--color-destructive-deep);
+  border-color: var(--color-destructive-deep);
+}
+
+.btn-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted-fg);
+}
+
+.btn-quiet:hover:not(:disabled) {
+  background: var(--color-sunk);
+  border-color: var(--color-border);
+  color: var(--color-fg);
+}
+
+.btn-icon {
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-muted-fg);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.icon-btn:hover {
+  background: var(--color-sunk);
+  color: var(--color-fg);
+}
+
+.icon-btn.danger:hover {
+  background: var(--color-danger-tint);
+  color: var(--color-destructive);
+}
+
+input[type="text"],
+input[type="search"],
+input[type="password"] {
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-fg);
+  font: 13px/1 var(--font-sans);
+}
+
+input::placeholder {
+  color: var(--color-faint-fg);
+}
+
+input[type="search"] {
+  min-width: 0;
+}
+
+/* The vision state chip: mono, quiet, honest. */
+.state {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--color-sunk);
+  color: var(--color-muted-fg);
+  font: 500 10px/1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.state[data-state="on"] {
+  background: var(--color-ok-tint);
+  color: var(--color-ok);
+}
+
+.state[data-state="unavailable"] {
+  background: var(--color-danger-tint);
+  color: var(--color-destructive);
+}
+
+/* ---------- activity (one busy signal, reused) ---------- */
+
+.activity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 var(--space-4) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  flex: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.activity-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-muted-fg);
+}
+
+.activity-meter {
+  flex: 1 1 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--color-sunk);
+  overflow: hidden;
+}
+
+.activity-meter::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: var(--activity, 0%);
+  background: var(--color-accent);
+  transition: width 240ms ease;
+}
+
+/* ---------- source documents ---------- */
+
+.doc-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doc-list .empty {
+  padding: var(--space-5) var(--space-3);
+  color: var(--color-muted-fg);
+  text-align: center;
+}
+
+/* The group is the card: a header bar with its own controls, and plain
+ * document rows inside. */
+.doc-group {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 160ms ease;
+}
+
+.doc-group:hover {
+  border-color: var(--color-border-strong);
+}
+
+.doc-group-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.doc-group.is-collapsed .doc-group-bar {
+  border-bottom: 0;
+}
+
+.doc-group-bar > .doc-group-check {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  /* Lines up with the rows' text below: same inset from the card edge. */
+  margin: 0 var(--space-2) 0 var(--space-1);
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.doc-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-faint-fg);
+  font: 600 10px/1.4 var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: color 160ms ease;
+}
+
+.doc-group-toggle:hover {
+  color: var(--color-accent);
+}
+
+.doc-group-toggle svg {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  transform: rotate(90deg);
+  transition: transform 160ms ease;
+}
+
+.doc-group-toggle[aria-expanded="false"] svg {
+  transform: rotate(0deg);
+}
+
+.doc-group-name {
+  /* The card's title: clearly bigger than the document rows it contains. */
+  font: 600 13px/1.4 var(--font-sans);
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-group-count {
+  margin-left: auto;
+  flex: none;
+  font: 10px/1.4 var(--font-mono);
+}
+
+/* A hand-made group with nothing in it yet. */
+.doc-group-blank {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  color: var(--color-faint-fg);
+  font: italic 12px/1.5 var(--font-sans);
+}
+
+/* The rename pencil and delete trash float over the bar's tail on hover,
+ * exactly like the document rows' tools: no reserved dead space. */
+.doc-group-tools {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 2px 2px var(--space-5);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(to right, transparent, var(--color-card) 26px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.doc-group-bar:hover .doc-group-tools,
+.doc-group-bar:focus-within .doc-group-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.doc {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  transition: background 160ms ease;
+}
+
+.doc-group .doc-items .doc:first-child {
+  border-top: 0;
+}
+
+.doc-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.doc:hover {
+  background: var(--color-sunk);
+}
+
+.doc[aria-current="true"] {
+  background: var(--color-accent-soft);
+}
+
+/* The grounding tick now lives only on the group bar. */
+.doc.off .doc-name {
+  color: var(--color-faint-fg);
+}
+
+.doc-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 12px/1.4 var(--font-sans);
+}
+
+.doc[aria-current="true"] .doc-name {
+  color: var(--color-accent-ink);
+}
+
+.doc-meta {
+  font: 11px/1.4 var(--font-mono);
+  color: var(--color-faint-fg);
+}
+
+.doc-missing {
+  font-size: 11px;
+  color: var(--color-destructive);
+}
+
+/* The tools float over the row's tail: no space is reserved for them, so a
+   filename uses the full width until the moment the buttons appear. */
+.doc-tools {
+  position: absolute;
+  right: var(--space-1);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px var(--space-1) 2px var(--space-6);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(to right, transparent, var(--color-card) 30px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+/* The overlay must dissolve into whatever the row is wearing. */
+.doc:hover .doc-tools {
+  background: linear-gradient(to right, transparent, var(--color-sunk) 30px);
+}
+
+.doc:hover .doc-tools,
+.doc:focus-within .doc-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ---------- chat ---------- */
+
+/* The log and its "jump back" pill share a positioning parent; the pill
+   floats over the log's bottom edge, where the text runs out. */
+.chat-log-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.jump-latest {
+  position: absolute;
+  bottom: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-card);
+  color: var(--color-muted-fg);
+  font: 500 11.5px/1.4 var(--font-sans);
+  box-shadow: 0 6px 18px var(--color-shadow);
+  cursor: pointer;
+}
+
+.jump-latest:hover {
+  color: var(--color-fg);
+  border-color: var(--color-accent);
+}
+
+.jump-latest svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.chat-msg {
+  max-width: 72ch;
+  animation: rise 200ms ease;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.chat-who {
+  display: block;
+  margin: 0 0 var(--space-1) var(--space-1);
+  font: 600 10px/1.4 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-faint-fg);
+}
+
+.chat-assistant {
+  align-self: stretch;
+  max-width: none;
+}
+
+.chat-assistant .chat-body {
+  font: 15px/1.65 var(--font-serif);
+}
+
+.chat-user {
+  align-self: flex-end;
+}
+
+.chat-user .chat-body {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-accent-soft);
+  color: var(--color-answer-ink);
+  white-space: pre-wrap;
+}
+
+.chat-msg.is-pending {
+  opacity: 0.6;
+}
+
+.chat-body p {
+  margin: 0 0 var(--space-3);
+}
+
+.chat-body p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-heading {
+  margin: var(--space-3) 0 var(--space-2);
+  font: 600 16px/1.4 var(--font-serif);
+}
+
+.chat-list,
+.chat-log li {
+  margin: 0 0 var(--space-1) var(--space-5);
+}
+
+.chat-error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-error-bg);
+  color: var(--color-destructive);
+  font: 12px/1.5 var(--font-sans);
+}
+
+.chat-stopped {
+  margin: 0;
+  color: var(--color-faint-fg);
+  font: italic 12px/1.5 var(--font-sans);
+}
+
+.chat-code {
+  margin: var(--space-2) 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-code-bg);
+  overflow-x: auto;
+}
+
+.chat-code code {
+  font: 12px/1.6 var(--font-mono);
+  color: var(--color-code-fg);
+}
+
+/* ---------- richer markdown answers ---------- */
+
+.chat-body h3 {
+  font: 600 17px/1.35 var(--font-serif);
+}
+
+.chat-body h4 {
+  font: 600 15px/1.35 var(--font-serif);
+}
+
+.chat-body h5 {
+  font: 600 12px/1.4 var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted-fg);
+}
+
+.chat-body ul,
+.chat-body ol {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-5);
+}
+
+.chat-body li {
+  margin: 2px 0;
+}
+
+.chat-body li > ul,
+.chat-body li > ol {
+  margin: 2px 0;
+}
+
+.chat-inline-code {
+  padding: 1px 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-sunk);
+  font: 12px/1.5 var(--font-mono);
+  color: var(--color-code-fg);
+}
+
+.chat-body a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-quote {
+  margin: var(--space-2) 0;
+  padding: var(--space-1) var(--space-3);
+  border-left: 3px solid var(--color-accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--color-sunk);
+  color: var(--color-muted-fg);
+}
+
+.chat-quote p {
+  margin: var(--space-1) 0;
+}
+
+.chat-rule {
+  margin: var(--space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.chat-table {
+  margin: var(--space-2) 0 var(--space-3);
+  border-collapse: collapse;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.chat-table th,
+.chat-table td {
+  border: 1px solid var(--color-border-strong);
+  padding: 5px var(--space-2);
+  text-align: left;
+  vertical-align: top;
+}
+
+.chat-table th {
+  background: var(--color-sunk);
+  font-weight: 600;
+}
+
+/* Drawings: the model's own svg, and mermaid output. */
+.chat-svg,
+.chat-mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: var(--space-2) 0;
+}
+
+.chat-mermaid {
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.diagram-fallback {
+  margin: 0 0 var(--space-1);
+  color: var(--color-faint-fg);
+  font: italic 12px/1.5 var(--font-sans);
+}
+
+/* Inline citation: a number that opens the passage it came from. */
+.chat-cite {
+  border: 0;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font: 500 11px/1.5 var(--font-mono);
+  cursor: pointer;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-ink);
+  transition: background 160ms ease;
+  vertical-align: baseline;
+  margin: 0 1px;
+}
+
+.chat-cite:hover {
+  background: var(--color-cite-hover);
+}
+
+.chat-plain {
+  font: 11px/1.5 var(--font-mono);
+  color: var(--color-faint-fg);
+}
+
+.chat-form {
+  flex: none;
+  /* One row: the Send button hugs the textarea's last line, because flex
+     items align to their bottom edge and the box grows upward from there. */
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.chat-form textarea {
+  flex: 1;
+  min-width: 0;
+  /* One line by default, exactly as tall as the button beside it. */
+  min-height: var(--control-h);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-fg);
+  font: 14px/1.55 var(--font-serif);
+  /* Height follows content (JS grows the box per line, up to the ceiling);
+     a user-draggable handle here only ever misaligns the pane. */
+  resize: none;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.chat-form textarea:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+#chat-send {
+  flex: none;
+  /* Send and Stop are different word lengths; the button does not twitch. */
+  min-width: 68px;
+  justify-content: center;
+}
+
+/* ---------- the chats panel ---------- */
+
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-list .empty {
+  padding: var(--space-4) var(--space-2);
+  color: var(--color-faint-fg);
+  font-size: 12px;
+  text-align: center;
+}
+
+.session {
+  position: relative;
+  display: flex;
+  border: 1px solid transparent;
+  border-left: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.session:hover {
+  background: var(--color-card);
+  border-color: var(--color-border);
+  border-left-color: var(--color-border);
+}
+
+.session[aria-current="true"] {
+  background: var(--color-card);
+  border-color: var(--color-border-strong);
+  border-left-color: var(--color-accent);
+}
+
+/* The row's whole surface is the open button; the tools are its siblings. */
+.session-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.session[aria-current="true"] {
+  background: var(--color-card);
+  border-color: var(--color-border-strong);
+  border-left-color: var(--color-accent);
+}
+
+.session-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 13px/1.45 var(--font-sans);
+}
+
+.session[aria-current="true"] .session-title {
+  color: var(--color-accent-ink);
+}
+
+.session-turns {
+  flex: none;
+  font: 11px/1.4 var(--font-mono);
+  color: var(--color-faint-fg);
+}
+
+/* Rename and delete live on the card and float over its tail on hover, so
+   the title never reserves room for buttons that are mostly invisible. */
+.session-tools {
+  position: absolute;
+  right: var(--space-1);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px var(--space-1) 2px var(--space-5);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(to right, transparent, var(--color-card) 28px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.session:hover .session-tools,
+.session:focus-within .session-tools {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* The chats panel's switch lives at the window's top-right corner, floating
+   above whichever pane owns that edge, so it never moves when the panel
+   folds. */
+.panes {
+  position: relative;
+}
+
+.panel-toggle {
+  position: absolute;
+  z-index: 5;
+  top: 9px;
+  right: 10px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-card);
+}
+
+.panel-toggle:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Header actions step aside of the floating switch. */
+.pane-ask .pane-head,
+.pane-sessions .pane-head {
+  padding-right: calc(var(--space-2) + 32px);
+}
+
+.panes.sessions-collapsed {
+  grid-template-columns: minmax(280px, 26%) minmax(360px, 1fr) 0;
+}
+
+.panes.sessions-collapsed .pane-sessions {
+  overflow: hidden;
+}
+
+.pane-sessions {
+  background: var(--color-sunk);
+}
+
+/* ---------- knowledge modal ---------- */
+
+/* The reading surface is a modal so documents and chat keep their width;
+   the passage list covers the workspace only when a document or citation is
+   clicked, and Escape is the exit. */
+.knowledge {
+  width: min(880px, 94vw);
+  height: min(72vh, 860px);
+  margin: auto;
+  /* No display here: an author display overrides the UA's
+     dialog:not([open]) { display: none } and shows the modal permanently. */
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  padding: 0;
+  box-shadow: 0 24px 60px var(--color-shadow);
+}
+
+.knowledge[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.knowledge::backdrop {
+  background: rgba(46, 36, 20, 0.45);
+}
+
+.knowledge .pane-head {
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
+}
+
+/* The modal header is the document: a real title line, then the filter on a
+ * line of its own, then the count. */
+.knowledge .pane-head {
+  padding: var(--space-4) var(--space-5) var(--space-2);
+  border-bottom: 0;
+}
+
+.knowledge .pane-title {
+  font: 500 17px/1.3 var(--font-serif);
+  text-transform: none;
+  letter-spacing: -0.005em;
+  color: var(--color-fg);
+}
+
+.knowledge-filter {
+  flex: none;
+  padding: 0 var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.knowledge-filter .filter {
+  width: 100%;
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-fg);
+  font: 13px/1.4 var(--font-sans);
+}
+
+.knowledge-filter .filter:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+
+.knowledge .count {
+  padding: var(--space-2) var(--space-5) 0;
+}
+
+.chunk-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-5);
+}
+
+.chunk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chunk {
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  padding: var(--space-2) var(--space-3);
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.chunk.is-cited {
+  border-left-color: var(--color-accent);
+  background: var(--color-cited-bg);
+}
+
+.chunk-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+  font: 11px/1.4 var(--font-mono);
+  color: var(--color-faint-fg);
+}
+
+.chunk-page {
+  color: var(--color-muted-fg);
+  font-weight: 600;
+}
+
+.chunk-id {
+  margin-left: auto;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-faint-fg);
+}
+
+.chunk-figure {
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  background: var(--color-figure-tint);
+  color: var(--color-figure-ink);
+  font: 500 10px/1.5 var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chunk-text {
+  margin: 0;
+  font: 14px/1.65 var(--font-serif);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.chunk[aria-expanded="true"] .chunk-text {
+  -webkit-line-clamp: unset;
+  display: block;
+}
+
+.chunk-expand {
+  margin-top: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: 500 12px/1.5 var(--font-sans);
+  cursor: pointer;
+}
+
+.chunk-expand:hover {
+  color: var(--color-accent-ink);
+  text-decoration: underline;
+}
+
+#load-more {
+  margin: var(--space-3) auto 0;
+}
+
+/* ---------- dialogs ---------- */
+
+.confirm {
+  width: min(460px, 90vw);
+  margin: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  color: var(--color-fg);
+  padding: var(--space-5);
+  box-shadow: 0 18px 44px var(--color-shadow);
+}
+
+.confirm::backdrop,
+.sheet::backdrop {
+  background: rgba(46, 36, 20, 0.45);
+}
+
+.confirm h2,
+.sheet h2 {
+  margin: 0 0 var(--space-2);
+  font: 600 18px/1.35 var(--font-serif);
+}
+
+.confirm p {
+  margin: 0 0 var(--space-3);
+  font-size: 13px;
+}
+
+.confirm-note {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-sunk);
+  color: var(--color-muted-fg);
+  font-size: 12px;
+}
+
+.confirm input[type="text"] {
+  width: 100%;
+  margin-bottom: var(--space-3);
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ---------- vision settings sheet ---------- */
+
+/* A settings form must never live in the header flex row: as a flex item it grows
+   the bar to its own height and pushes the whole workspace below the fold. The
+   form lives in a modal sheet; the chat bar only reports state. */
+.sheet {
+  width: min(560px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  margin: auto;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  color: var(--color-fg);
+  box-shadow: 0 24px 60px var(--color-shadow);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sheet-sub {
+  margin: 0 0 var(--space-4);
+  color: var(--color-muted-fg);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.switch {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  cursor: pointer;
+}
+
+.switch input {
+  margin: 3px 0 0;
+  accent-color: var(--color-accent);
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.switch b {
+  display: block;
+  font-size: 13px;
+}
+
+.switch small {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-muted-fg);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.sheet-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.sheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.sheet-field > label {
+  font: 600 11px/1.4 var(--font-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-muted-fg);
+}
+
+.sheet-field input {
+  width: 100%;
+}
+
+.sheet-field small {
+  color: var(--color-faint-fg);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.vision-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-h);
+  margin-top: var(--space-4);
+}
+
+.vision-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--color-muted-fg);
+  white-space: pre-wrap;
+}
+
+.sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* ---------- toast ---------- */
+
+.toast {
+  position: fixed;
+  bottom: var(--space-5);
+  left: 50%;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-card);
+  color: var(--color-fg);
+  font: 500 12.5px/1.5 var(--font-sans);
+  box-shadow: 0 10px 30px var(--color-shadow);
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  pointer-events: none;
+  transition: opacity 200ms ease, transform 200ms ease;
+  max-width: min(560px, 88vw);
+  text-align: center;
+}
+
+.toast[data-visible="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* A toast offering Undo is a control, not just an announcement: it takes
+   clicks for as long as the action is live. */
+.toast.has-action[data-visible="true"] {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.toast-action {
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  padding: 2px var(--space-3);
+  background: transparent;
+  color: inherit;
+  font: 600 11.5px/1.5 var(--font-sans);
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.toast[data-kind="error"] {
+  background: var(--color-destructive);
+  border-color: var(--color-destructive);
+  color: var(--color-on-destructive);
+}
+
+/* ---------- narrow windows and reduced motion ---------- */
+
+@media (max-width: 1180px) {
+  .panes {
+    grid-template-columns: minmax(230px, 26%) minmax(0, 1fr) minmax(200px, 210px);
+  }
+
+  .panes.sessions-collapsed {
+    grid-template-columns: minmax(230px, 26%) minmax(0, 1fr) 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .spinner {
+    animation: none !important;
+    border-top-color: var(--color-accent);
+    border-right-color: var(--color-accent);
+  }
+}

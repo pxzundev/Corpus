@@ -1,0 +1,12 @@
+{
+  "name": "corpus-gui-ui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Front-end tests for the Corpus GUI (jsdom, no bundler)",
+  "scripts": {
+    "test": "node --test ui/ui.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^27.0.0"
+  }
+}

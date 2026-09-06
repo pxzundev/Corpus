@@ -1,0 +1,12 @@
+/target
+/.fastembed_cache
+node_modules/
+.DS_Store
+universal_mcp_servers.json
+# tauri-build regenerates these from capabilities/ on every build
+crates/gui/gen/
+
+# The document corpus this app indexes: ICAO/CAAP PDFs the user supplies.
+# 32 MB of copyrighted regulatory material, and data rather than source, so it
+# is not committed — but it lives here, not in another project's directory.
+/docs

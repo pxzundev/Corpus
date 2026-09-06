@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Corpus - RAG Knowledge Base</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="panes" id="panes">
+      <section class="pane pane-docs" aria-labelledby="docs-heading">
+        <div class="pane-head">
+          <div class="head-title">
+            <h2 id="docs-heading" class="pane-title">Source documents</h2>
+            <button type="button" class="icon-btn info-btn" id="stats-info"
+                    aria-expanded="false" aria-controls="stats-popover" title="About this index">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" /><path d="M12 11v5" /><path d="M12 7.6h.01" />
+              </svg>
+            </button>
+            <div class="popover" id="stats-popover" hidden>
+              <p class="stats" id="stats" aria-live="polite">Loading index…</p>
+            </div>
+          </div>
+          <div class="head-actions">
+            <button type="button" class="icon-btn" id="add-files" title="Add documents"
+                    aria-label="Add documents">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+            <button type="button" class="icon-btn" id="add-folder" title="Add a folder"
+                    aria-label="Add a folder">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3z" /></svg>
+            </button>
+            <button type="button" class="icon-btn" id="group-new" title="New group"
+                    aria-label="Create a new document group">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 7h6l2 2h10v10H3z" />
+                <path d="M16 14h4M18 12v4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="activity" id="activity" hidden>
+          <span class="spinner" aria-hidden="true"></span>
+          <p class="activity-text" id="activity-text" role="status" aria-live="polite"></p>
+          <div class="activity-meter" id="activity-meter" role="progressbar"
+               aria-label="Indexing progress" aria-valuemin="0" aria-valuemax="100"
+               aria-valuenow="0"></div>
+        </div>
+        <ul class="doc-list" id="doc-list" aria-busy="true"></ul>
+      </section>
+
+      <section class="pane pane-ask" aria-labelledby="ask-heading">
+        <div class="pane-head chat-bar">
+          <h2 id="ask-heading" class="pane-title">Chat</h2>
+          <button type="button" class="btn btn-quiet" id="vision-open" aria-haspopup="dialog"
+                  title="Vision model used to caption figures and to answer the chat">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
+              <circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" />
+            </svg>
+            Vision
+            <span class="state" id="vision-state" data-state="off">off</span>
+          </button>
+        </div>
+        <div class="chat-log-wrap">
+          <div class="chat-log" id="chat-log" aria-live="polite" aria-busy="false">
+            <p class="pane-empty" id="chat-empty">Ask about the indexed documents and the local
+              model answers from retrieved passages, citing the pages it used. Answers are
+              grounded only in the documents ticked on the left. The conversation
+              remembers itself: ask a follow-up like “what does page 45 say about gradients?”.
+              Figures it quotes are captioned readings, not printed text, and it will say so.</p>
+          </div>
+          <button type="button" class="jump-latest" id="chat-jump" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6" /></svg>
+            Jump to the latest answer
+          </button>
+        </div>
+        <form class="chat-form" id="chat-form">
+          <label class="sr-only" for="chat-input">Question</label>
+          <textarea id="chat-input" rows="1" placeholder="Ask the knowledge base…"
+                    autocomplete="off"></textarea>
+          <button type="submit" class="btn btn-accent" id="chat-send">Send</button>
+        </form>
+      </section>
+
+      <aside class="pane pane-sessions" id="sessions-panel" aria-labelledby="sessions-heading">
+        <div class="pane-head">
+          <h2 id="sessions-heading" class="pane-title">Sessions</h2>
+          <div class="head-actions">
+            <button type="button" class="icon-btn" id="chat-new" title="Start a new chat"
+                    aria-label="Start a new chat">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+          </div>
+        </div>
+        <ul class="session-list" id="chat-session-list"></ul>
+      </aside>
+
+      <button type="button" class="icon-btn panel-toggle" id="sessions-toggle"
+              aria-expanded="true" aria-controls="sessions-panel"
+              title="Hide the sessions panel">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+          <path d="M14.5 4.5v15" />
+        </svg>
+      </button>
+    </main>
+
+    <dialog class="knowledge" id="knowledge-dialog" aria-labelledby="chunks-heading">
+      <div class="pane-head">
+        <h2 id="chunks-heading" class="pane-title">Knowledge</h2>
+        <button type="button" class="icon-btn" id="knowledge-close" title="Close (Esc)"
+                aria-label="Close the knowledge window">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </div>
+      <div class="knowledge-filter">
+        <input
+          type="search"
+          id="chunk-filter"
+          class="filter"
+          placeholder="Filter this document’s text"
+          aria-label="Filter chunks of the selected document"
+        />
+      </div>
+      <p class="count" id="chunk-count"></p>
+      <div class="activity" id="chunks-activity" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <p class="activity-text" id="chunks-activity-text" role="status" aria-live="polite"></p>
+      </div>
+      <div class="chunk-scroll" id="chunk-scroll" aria-busy="true">
+        <p class="pane-empty" id="chunk-empty">Every indexed chunk is text taken from the
+          page, so a passage here can be checked against the original.</p>
+        <ol class="chunk-list" id="chunk-list"></ol>
+        <button type="button" class="btn" id="load-more" hidden>Load more</button>
+      </div>
+    </dialog>
+
+    <dialog class="confirm" id="confirm-remove">
+      <h2 id="confirm-title">Remove from the index?</h2>
+      <p id="confirm-body"></p>
+      <p class="confirm-note">
+        The original file on disk is not touched. Removing it here takes its
+        passages out of retrieval; you can add the file again later.
+      </p>
+      <form method="dialog" class="confirm-actions">
+        <button type="button" class="btn" id="confirm-cancel">Cancel</button>
+        <button type="button" class="btn btn-destructive" id="confirm-ok">Remove</button>
+      </form>
+    </dialog>
+
+    <dialog class="sheet" id="vision-dialog" aria-labelledby="vision-dialog-title">
+      <header class="sheet-head">
+        <div>
+          <h2 id="vision-dialog-title">Vision model</h2>
+          <p class="sheet-sub">
+            Figures in these documents are drawings with no text layer, so nothing on the
+            page contains the gradients and callouts you search for. A vision model
+            describes each figure, and that description becomes searchable text. The same
+            local model answers the chat.
+          </p>
+        </div>
+        <button type="button" class="icon-btn" id="vision-close" aria-label="Close vision settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      <label class="switch">
+        <input type="checkbox" id="vision-enabled" />
+        <span>
+          <b>Caption figures when indexing</b>
+          <small>Takes a few seconds per figure page the first time. Captions are cached,
+            so re-indexing costs nothing.</small>
+        </span>
+      </label>
+
+      <div class="sheet-grid">
+        <div class="sheet-field">
+          <label for="vision-url">Endpoint</label>
+          <input type="text" id="vision-url" spellcheck="false" autocomplete="off"
+                 placeholder="http://127.0.0.1:11234/v1" aria-describedby="vision-url-hint" />
+          <small id="vision-url-hint">Local only: loopback, a private network address, or a
+            .local name. Anything else is refused before a page image or a question leaves
+            this machine.</small>
+        </div>
+        <div class="sheet-field">
+          <label for="vision-model">Model</label>
+          <input type="text" id="vision-model" spellcheck="false" autocomplete="off"
+                 placeholder="the id your server reports" aria-describedby="vision-model-hint" />
+          <small id="vision-model-hint">What a server advertises as “vision” is not
+            evidence. Test the model sends a real image and shows the answer.</small>
+        </div>
+        <div class="sheet-field">
+          <label for="vision-key">API key</label>
+          <input type="password" id="vision-key" spellcheck="false" autocomplete="off"
+                 placeholder="only if the endpoint needs one" aria-describedby="vision-key-hint" />
+          <small id="vision-key-hint">Stored as plain text in this app’s data folder.</small>
+        </div>
+      </div>
+
+      <div class="vision-status">
+        <span class="spinner" id="vision-spinner" hidden aria-hidden="true"></span>
+        <p class="vision-note" id="vision-note" role="status" aria-live="polite"></p>
+      </div>
+
+      <footer class="sheet-actions">
+        <button type="button" class="btn" id="vision-test">Test the model</button>
+        <button type="button" class="btn btn-accent" id="vision-done">Done</button>
+      </footer>
+    </dialog>
+
+    <dialog class="confirm" id="caption-prompt">
+      <h2>Caption the figures in these documents?</h2>
+      <p id="caption-prompt-body"></p>
+      <p class="confirm-note" id="caption-prompt-warn" hidden></p>
+      <form method="dialog" class="confirm-actions">
+        <button type="button" class="btn" id="caption-prompt-cancel">Cancel</button>
+        <button type="button" class="btn" id="caption-prompt-text">Text only</button>
+        <button type="button" class="btn btn-accent" id="caption-prompt-yes">Caption figures</button>
+      </form>
+    </dialog>
+
+    <dialog class="confirm" id="chat-rename-dialog" aria-labelledby="chat-rename-title">
+      <h2 id="chat-rename-title">Rename this chat</h2>
+      <label class="sr-only" for="chat-rename-input">Chat title</label>
+      <input type="text" id="chat-rename-input" autocomplete="off" />
+      <form method="dialog" class="confirm-actions">
+        <button type="button" class="btn" id="chat-rename-cancel">Cancel</button>
+        <button type="button" class="btn btn-accent" id="chat-rename-ok">Save</button>
+      </form>
+    </dialog>
+
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+    <script src="app.js" type="module"></script>
+  </body>
+</html>

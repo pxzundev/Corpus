@@ -1,0 +1,21 @@
+[package]
+name = "corpus-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+fastembed.workspace = true
+pdf-extract = "0.12.0"
+lopdf = "0.42"
+sha2 = "0.11.0"
+dirs = "6.0.0"
+pdfium-render = "0.8"
+ureq = "3"
+image = { version = "0.25", default-features = false, features = ["png"] }
+chrono = "0.4.45"
+futures-executor = "0.3.34"
+futures-util = "0.3.34"
