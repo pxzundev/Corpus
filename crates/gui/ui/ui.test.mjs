@@ -145,6 +145,25 @@ function page(calls, options = {}) {
             apiKeySet: Boolean(args.apiKey) || Boolean(options.vision?.apiKeySet),
             pdfium: options.vision?.pdfium ?? true,
           });
+        if (name === "mcp_config")
+          return Promise.resolve({
+            command: "/tmp/data/bin/corpus-mcp",
+            json: JSON.stringify(
+              {
+                mcpServers: {
+                  corpus: {
+                    transport: "stdio",
+                    command: "/tmp/data/bin/corpus-mcp",
+                    args: [],
+                    enabled: true,
+                    timeout: 180,
+                  },
+                },
+              },
+              null,
+              2,
+            ),
+          });
         if (name === "test_vision")
           return options.testVisionError
             ? Promise.reject(new Error(options.testVisionError))
@@ -1690,4 +1709,33 @@ test("the selected document is marked the way the stylesheet keys it", async () 
   // means no selection is ever visible, and no test would notice.
   assert.equal(doc(dom).querySelectorAll(".doc")[0].getAttribute("aria-current"), "true");
   assert.equal(doc(dom).querySelectorAll(".doc")[1].hasAttribute("aria-current"), false);
+});
+
+test("the MCP sheet shows the real command and closes cleanly", async () => {
+  const calls = [];
+  const { dom } = page(calls);
+  await tick();
+  click(dom, "#mcp-open");
+  await tick();
+  const pre = text(dom, "#mcp-json");
+  assert.match(pre, /corpus-mcp/);
+  assert.match(pre, /"enabled": true/);
+  assert.match(pre, /"timeout": 180/);
+  assert.equal(calls.filter((call) => call.name === "mcp_config").length, 1);
+  click(dom, "#mcp-done");
+  await tick();
+  assert.equal(doc(dom).querySelector("#mcp-dialog").open, false, "the Done button exits");
+});
+
+test("copying the MCP config selects it when the clipboard is unavailable", async () => {
+  const { dom } = page([]);
+  await tick();
+  click(dom, "#mcp-open");
+  await tick();
+  click(dom, "#mcp-copy");
+  await tick();
+  const selection = doc(dom).getSelection();
+  assert.equal(selection.rangeCount, 1);
+  assert.match(String(selection), /corpus-mcp/);
+  assert.match(text(dom, "#mcp-note"), /copy/i);
 });

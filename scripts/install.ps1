@@ -60,8 +60,7 @@ Write-Host "client's mcpServers config (pi, Claude Desktop, and others that foll
 Write-Host ""
 $mcp = @{
     mcpServers = @{
-        'local-web-search' = @{ command = 'npx'; args = @('-y', '@modelcontextprotocol/server-puppeteer') }
-        corpus             = @{ transport = 'stdio'; command = "$dest\corpus-mcp.exe"; args = @(); enabled = $true; timeout = 180 }
+        corpus = @{ transport = 'stdio'; command = "$dest\corpus-mcp.exe"; args = @(); enabled = $true; timeout = 180 }
     }
 }
 $mcp | ConvertTo-Json -Depth 5

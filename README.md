@@ -32,10 +32,11 @@ binary at build time.
 
 Two ways in. The easy way: download `Corpus_0.1.0_aarch64.dmg` from the
 [releases page](https://github.com/pxzundev/Corpus/releases), open it, and drag
-`Corpus.app` into Applications. The bundle installs the GUI only; the CLI tools
-(`corpus`, `corpus-mcp`) ship separately in the same release's zip — see
-[Using the MCP server from a client](#using-the-mcp-server-from-a-client) below.
-To build from source instead — a few minutes:
+`Corpus.app` into Applications. The app is self-contained for MCP: it carries
+`corpus-mcp` and places it in the data folder on first launch (see
+[Using the MCP server from a client](#using-the-mcp-server-from-a-client) below). The
+CLI `corpus` binary ships separately in the same release's zip if you also want
+command-line indexing. To build from source instead — a few minutes:
 
 ```bash
 # 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
@@ -88,6 +89,10 @@ cargo build --release --workspace
 .\target\release\corpus.exe --help  # the CLI: probe | index | search | list
 ```
 
+Windows has no bundled `.app`, but the GUI still self-connects MCP: it looks for
+`corpus-mcp.exe` beside itself and places it in `%APPDATA%\Corpus\bin` on first launch,
+so any folder holding all the exes works, and the MCP sheet shows the JSON to paste.
+
 On first run the embedding and reranking models download automatically (~562 MB in
 total). Warm them before opening the window with `.\target\release\corpus.exe probe`.
 The window needs the WebView2 runtime, preinstalled on Windows 11 (on Windows 10,
@@ -104,8 +109,9 @@ To pick up changes later: `git pull && cargo build --release --workspace`.
 ## Data dir
 
 Everything lives in one directory: `models/`, `index/`, `vision.json`, `captions.jsonl`,
-`pdfium/`. macOS `~/Library/Application Support/Corpus`, Windows `%APPDATA%`,
-Linux `~/.local/share`. Override with `RAG_DATA_DIR`.
+`pdfium/`, and `bin/` (the MCP server, copied here by the GUI on first launch). macOS
+`~/Library/Application Support/Corpus`, Windows `%APPDATA%`, Linux `~/.local/share`.
+Override with `RAG_DATA_DIR`.
 
 ```bash
 # Isolated store for testing: never touches the real index, settings or caption cache
@@ -262,9 +268,37 @@ tail -f /tmp/corpus-gui.log          # stderr of the window launched from a shel
 `corpus-mcp` speaks MCP over stdio and exposes two tools: `search_docs` (fused lexical +
 dense search, optional rerank and exact-filename filter) and `list_documents`. It needs
 no inference engine — both tools run entirely against the local index, so any MCP client
-connects to it as-is, with no model, API key or engine setup on Corpus's side. The two
-binaries are not inside the `.app` bundle, so install them first with the folder-picking
-installer:
+connects to it as-is, with no model, API key or engine setup on Corpus's side.
+
+### From the GUI app (nothing to do)
+
+The `.app` bundle carries `corpus-mcp` inside it. On first launch the GUI places the
+server in the data folder (`~/Library/Application Support/Corpus/bin/corpus-mcp`), so
+clients can point at a stable path and uninstalling stays "delete the app, delete the
+data folder". Click the **MCP** button in the Chat header: the sheet shows exactly this
+JSON for your machine, with a **Copy JSON** button:
+
+```json
+{
+  "mcpServers": {
+    "corpus": {
+      "transport": "stdio",
+      "command": "/Users/you/Library/Application Support/Corpus/bin/corpus-mcp",
+      "args": [],
+      "enabled": true,
+      "timeout": 180
+    }
+  }
+}
+```
+
+On Windows the command is `%APPDATA%\\Corpus\\bin\\corpus-mcp.exe`; on Linux,
+`~/.local/share/Corpus/bin/corpus-mcp` (the sheet always shows the absolute form). If
+you set `RAG_DATA_DIR`, the sheet shows the server inside that directory instead.
+
+### CLI-only installs (source build, or the release zip)
+
+The folder-picking installer still exists for users who want just the CLI binaries:
 
 ```bash
 # macOS and Linux: asks where to put them, copies, prints the JSON below
@@ -279,7 +313,8 @@ bash scripts/install.sh
 ```
 
 Then add the printed block to your client's `mcpServers` config (pi, Claude Desktop,
-and other clients that follow the convention):
+and other clients that follow the convention) — here with one unrelated server to show
+the shape clients ignore extra entries by:
 
 ```json
 {
@@ -304,13 +339,30 @@ The installer fills in `command` with the folder you chose; clients that only wa
 from whatever documents you indexed; add documents through the GUI (or the CLI's
 `corpus index`) first.
 
+## Uninstalling
+
+Corpus creates nothing outside two places, so removal is two deletions:
+
+- The app: drag `Corpus.app` to the Trash (macOS). On Windows or Linux, delete the
+  folder you installed the binaries into.
+- The data folder: `~/Library/Application Support/Corpus` (macOS), `%APPDATA%\Corpus`
+  (Windows), `~/.local/share/Corpus` (Linux). The embedding models, the index, the
+  caption cache, the vision settings, the PDFium build, and the MCP server the GUI
+  placed in `bin/` all live inside it.
+
+Then remove the `corpus` entry from your client's `mcpServers` config. No caches,
+launch agents or shell rc edits exist anywhere else.
+
 ## Notes on distribution
 
 `bundle.active` is `true` with targets `app` and `dmg`, so on macOS `cargo tauri build`
 produces `Corpus.app` and `Corpus_0.1.0_aarch64.dmg` under `target/release/bundle/`.
-The bundle is ad-hoc signed (no developer certificate), so Gatekeeper asks for a
-confirm on first open — right-click → Open, once. Windows and Linux have no installer;
-build from source as above.
+`corpus-mcp` rides inside the bundle as a resource — the build script copies the freshly
+built binary into `crates/gui/resources/` (gitignored) and the GUI places it in the data
+folder on first launch, so the app is self-contained: no separate CLI install for MCP
+connectivity. The bundle is ad-hoc signed (no developer certificate), so Gatekeeper
+asks for a confirm on first open — right-click → Open, once. Windows and Linux have no
+installer; build from source as above.
 
 ## License
 

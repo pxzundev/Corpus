@@ -152,6 +152,13 @@ const nodes = {
   chunkEmpty: el("chunk-empty"),
   visionOpen: el("vision-open"),
   visionState: el("vision-state"),
+  mcpOpen: el("mcp-open"),
+  mcpDialog: el("mcp-dialog"),
+  mcpClose: el("mcp-close"),
+  mcpDone: el("mcp-done"),
+  mcpCopy: el("mcp-copy"),
+  mcpJson: el("mcp-json"),
+  mcpNote: el("mcp-note"),
   visionDialog: el("vision-dialog"),
   visionClose: el("vision-close"),
   visionDone: el("vision-done"),
@@ -876,6 +883,51 @@ async function saveVision() {
   } catch (error) {
     visionNote(String(error), false);
   }
+}
+
+/// The sheet is read-only, so every open re-reads where the server ended up.
+function openMcp() {
+  openDialog(nodes.mcpDialog);
+  loadMcp();
+}
+
+async function loadMcp() {
+  nodes.mcpNote.textContent = "";
+  nodes.mcpNote.classList.remove("is-error", "is-ok");
+  nodes.mcpJson.textContent = "Loading…";
+  try {
+    const info = await invoke("mcp_config");
+    nodes.mcpJson.textContent = info.json;
+  } catch (error) {
+    nodes.mcpJson.textContent = "";
+    mcpNote(String(error), false);
+  }
+}
+
+function mcpNote(message, ok = true) {
+  nodes.mcpNote.textContent = message;
+  nodes.mcpNote.classList.toggle("is-error", !ok);
+  nodes.mcpNote.classList.toggle("is-ok", ok && Boolean(message));
+}
+
+/// WKWebView (and jsdom) may deny clipboard writes, so the fallback selects the
+/// JSON — a manual copy is then one keystroke.
+async function copyMcp() {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(nodes.mcpJson.textContent);
+      mcpNote("Copied to the clipboard.", true);
+      return;
+    }
+  } catch (error) {
+    // fall through to the manual fallback
+  }
+  const range = document.createRange();
+  range.selectNodeContents(nodes.mcpJson);
+  const selection = document.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  mcpNote("Press Cmd/Ctrl+C to copy the selected JSON.", true);
 }
 
 /// Closing the sheet stores what is in the fields; Escape is the discard path.
@@ -2114,6 +2166,10 @@ listen("ingest-progress", ({ payload }) => {
 listen("app-ready", () => refresh());
 
 nodes.visionOpen.addEventListener("click", openVision);
+nodes.mcpOpen.addEventListener("click", openMcp);
+nodes.mcpClose.addEventListener("click", () => closeDialog(nodes.mcpDialog));
+nodes.mcpDone.addEventListener("click", () => closeDialog(nodes.mcpDialog));
+nodes.mcpCopy.addEventListener("click", copyMcp);
 nodes.visionClose.addEventListener("click", commitVision);
 nodes.visionDone.addEventListener("click", commitVision);
 nodes.visionDialog.addEventListener("cancel", () => {

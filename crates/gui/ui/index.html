@@ -53,6 +53,14 @@
       <section class="pane pane-ask" aria-labelledby="ask-heading">
         <div class="pane-head chat-bar">
           <h2 id="ask-heading" class="pane-title">Chat</h2>
+          <button type="button" class="btn btn-quiet" id="mcp-open" aria-haspopup="dialog"
+                  title="Copy the MCP client config for this data folder">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 12h8" />
+              <circle cx="5" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+            </svg>
+            MCP
+          </button>
           <button type="button" class="btn btn-quiet" id="vision-open" aria-haspopup="dialog"
                   title="Vision model used to caption figures and to answer the chat">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -207,6 +215,42 @@
       <footer class="sheet-actions">
         <button type="button" class="btn" id="vision-test">Test the model</button>
         <button type="button" class="btn btn-accent" id="vision-done">Done</button>
+      </footer>
+    </dialog>
+
+    <dialog class="sheet" id="mcp-dialog" aria-labelledby="mcp-heading">
+      <header class="sheet-head">
+        <div>
+          <h2 id="mcp-heading">Connect a harness or MCP client</h2>
+          <p class="sheet-sub">
+            The server answers searches from this data folder's index — no engine, API key or
+            model on this side. Corpus keeps it inside the data folder, so uninstalling is
+            just deleting the app and this folder.
+          </p>
+        </div>
+        <button type="button" class="icon-btn" id="mcp-close" aria-label="Close MCP config">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+
+      <div class="sheet-grid">
+        <div class="sheet-field">
+          <label for="mcp-json">mcpServers JSON</label>
+          <pre id="mcp-json" class="mcp-json" tabindex="0"></pre>
+          <small id="mcp-json-hint">
+            Paste this into your client's config. The command below is the real path on this
+            machine — Corpus placed the server there on first launch.
+          </small>
+        </div>
+      </div>
+
+      <div class="vision-status">
+        <p class="vision-note" id="mcp-note" role="status" aria-live="polite"></p>
+      </div>
+
+      <footer class="sheet-actions">
+        <button type="button" class="btn" id="mcp-copy">Copy JSON</button>
+        <button type="button" class="btn btn-accent" id="mcp-done">Done</button>
       </footer>
     </dialog>
 

@@ -66,10 +66,6 @@ mcpServers config (pi, Claude Desktop, and others that follow the convention):
 
 {
   "mcpServers": {
-    "local-web-search": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
-    },
     "corpus": {
       "transport": "stdio",
       "command": "$DEST/corpus-mcp",

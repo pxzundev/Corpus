@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "identifier": "dev.pxz.corpus",
   "build": {
-    "frontendDist": "ui"
+    "frontendDist": "ui",
+    "beforeBuildCommand": "cargo build --release -p corpus-mcp"
   },
   "app": {
     "withGlobalTauri": true,
@@ -30,6 +31,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg"]
+    "targets": ["app", "dmg"],
+    "resources": ["resources/corpus-mcp"]
   }
 }

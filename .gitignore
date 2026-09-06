@@ -6,6 +6,9 @@ universal_mcp_servers.json
 # tauri-build regenerates these from capabilities/ on every build
 crates/gui/gen/
 
+# corpus-mcp copies here at build time, to ride inside the app bundle as a resource
+crates/gui/resources/
+
 # The document corpus this app indexes: ICAO/CAAP PDFs the user supplies.
 # 32 MB of copyrighted regulatory material, and data rather than source, so it
 # is not committed — but it lives here, not in another project's directory.

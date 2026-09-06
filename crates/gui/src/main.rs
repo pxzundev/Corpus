@@ -8,12 +8,14 @@
 //! those are cached.
 
 use std::collections::{HashMap, hash_map::DefaultHasher};
+use std::fs;
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use anyhow::Context;
 use corpus_core::{
     Chunk, DEFAULT_K, DocumentRecord, Encoder, Index, IngestReport, Paths, Reranker, Stage,
     ingest_files,
@@ -930,8 +932,115 @@ async fn index_folder(
     run_ingest(&app, &state, files, caption).await
 }
 
+/// The MCP server lives inside the shared data folder, so uninstalling is
+/// deleting the app and that one folder — nothing else to hunt down.
+fn mcp_bin_dir(paths: &Paths) -> PathBuf {
+    paths.data.join("bin")
+}
+
+/// Copy the MCP server binary into the data folder. Clients point at this path,
+/// which survives app moves and updates. A copy that is already as fresh as its
+/// source is left alone, so launches stay cheap.
+fn place_mcp_binary(source: &Path, dest_dir: &Path) -> anyhow::Result<PathBuf> {
+    let name = source
+        .file_name()
+        .with_context(|| format!("{} has no file name", source.display()))?;
+    let dest = dest_dir.join(name);
+    let modified = |path: &Path| {
+        fs::metadata(path)
+            .and_then(|meta| meta.modified())
+            .with_context(|| format!("{} is not readable", path.display()))
+    };
+    if let (Ok(dest_time), Ok(source_time)) = (modified(&dest), modified(source)) {
+        if dest_time >= source_time {
+            return Ok(dest);
+        }
+    }
+    fs::create_dir_all(dest_dir)
+        .with_context(|| format!("could not create {}", dest_dir.display()))?;
+    fs::copy(source, &dest)
+        .with_context(|| format!("could not copy {} to {}", source.display(), dest.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&dest, fs::Permissions::from_mode(0o755))
+            .with_context(|| format!("could not make {} executable", dest.display()))?;
+    }
+    Ok(dest)
+}
+
+/// Where the MCP server binary ships with this GUI build: inside the bundle as
+/// a resource, or beside the raw binary in dev and zip layouts.
+fn locate_mcp_source() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let exe_dir = exe.parent()?;
+    let name = if cfg!(target_os = "windows") {
+        "corpus-mcp.exe"
+    } else {
+        "corpus-mcp"
+    };
+    let mut dirs = Vec::new();
+    if let Some(contents) = exe_dir.parent() {
+        // Bundled: Corpus.app/Contents/MacOS/… → Contents/Resources
+        dirs.push(contents.join("Resources").join(name));
+        dirs.push(contents.join("Resources/resources").join(name));
+    }
+    dirs.push(exe_dir.join(name));
+    dirs.into_iter().find(|path| path.exists())
+}
+
+fn ensure_mcp_server(paths: &Paths) -> anyhow::Result<PathBuf> {
+    let source = locate_mcp_source().ok_or_else(|| {
+        anyhow::anyhow!(
+            "corpus-mcp is not shipped in this build — run scripts/install.sh, or \
+             cargo build --release --workspace"
+        )
+    })?;
+    place_mcp_binary(&source, &mcp_bin_dir(paths))
+}
+
+/// One JSON block, ready to paste, with this install's real server path.
+fn mcp_config_json(command: &Path) -> String {
+    let payload = serde_json::json!({
+        "mcpServers": {
+            "corpus": {
+                "transport": "stdio",
+                "command": command.display().to_string(),
+                "args": [],
+                "enabled": true,
+                "timeout": 180
+            }
+        }
+    });
+    serde_json::to_string_pretty(&payload).expect("the mcpServers payload always serialises")
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct McpStatus {
+    command: String,
+    json: String,
+}
+
+/// The GUI keeps the MCP server inside the data folder; this sheet hands the
+/// client config out with that real path, so nothing is fiddled by hand.
+#[tauri::command]
+async fn mcp_config(state: State<'_, Arc<AppState>>) -> Result<McpStatus, String> {
+    let dest = ensure_mcp_server(&state.paths).map_err(|error| format!("{error:#}"))?;
+    Ok(McpStatus {
+        command: dest.display().to_string(),
+        json: mcp_config_json(&dest),
+    })
+}
+
 pub fn run() {
     let paths = Arc::new(Paths::resolve().expect("no writable data directory"));
+    if let Err(error) = ensure_mcp_server(&paths) {
+        eprintln!(
+            "corpus-mcp could not be placed in {}: {error:#}",
+            mcp_bin_dir(&paths).display()
+        );
+    }
     let state = Arc::new(AppState {
         paths: Arc::clone(&paths),
         models: Models {
@@ -957,6 +1066,7 @@ pub fn run() {
             vision_settings,
             save_vision_settings,
             test_vision,
+            mcp_config,
             commit_ingest,
             chat_completion,
             cancel_chat,
@@ -1083,6 +1193,59 @@ mod tests {
 
     /// The window tells a pending selection from a finished ingest by looking
     /// for `token`, so only the pending shape may carry it.
+    #[test]
+    fn the_mcp_server_lands_executable_in_the_data_dir() {
+        let root = std::env::temp_dir().join(format!("corpus-mcp-test-{}", std::process::id()));
+        let source_dir = root.join("source");
+        std::fs::create_dir_all(&source_dir).expect("could not create the test source dir");
+        let source = source_dir.join("corpus-mcp");
+        std::fs::write(&source, "binary bytes").expect("could not write the test source");
+        let dest_dir = root.join("data/bin");
+
+        let dest = place_mcp_binary(&source, &dest_dir).expect("the copy should succeed");
+        assert_eq!(dest.file_name().expect("a file name"), "corpus-mcp");
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert!(
+                std::fs::metadata(&dest)
+                    .expect("the copy should exist")
+                    .permissions()
+                    .mode()
+                    & 0o111
+                    != 0,
+                "the copied server should be executable",
+            );
+        }
+
+        // A copy that is already as fresh as its source is left alone, so a
+        // launch never rewrites it.
+        let before = std::fs::metadata(&dest)
+            .expect("the copy should exist")
+            .modified()
+            .expect("mtime should read");
+        place_mcp_binary(&source, &dest_dir).expect("the second pass should succeed");
+        let after = std::fs::metadata(&dest)
+            .expect("the copy should exist")
+            .modified()
+            .expect("mtime should read");
+        assert_eq!(before, after, "an unchanged source should not rewrite the copy");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn the_mcp_config_json_carries_the_installed_path() {
+        let json = mcp_config_json(Path::new("/tmp/data/bin/corpus-mcp"));
+        assert!(
+            json.contains("\"command\": \"/tmp/data/bin/corpus-mcp\""),
+            "the real path must appear as the command: {json}"
+        );
+        assert!(json.contains("\"enabled\": true"), "pi-style schema: {json}");
+        assert!(json.contains("\"timeout\": 180"), "pi-style schema: {json}");
+        assert!(json.contains("\"transport\": \"stdio\""), "pi-style schema: {json}");
+    }
+
     #[test]
     fn only_a_pending_selection_carries_a_token() {
         let pending = serde_json::to_value(AddOutcome::Pending(PendingIngest {
