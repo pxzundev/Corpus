@@ -47,6 +47,22 @@ What Corpus does, in everyday terms:
 
 Corpus is open source (MIT) and free to use.
 
+## Chat in the GUI
+
+The window's chat answers from the same vision endpoint: each question retrieves passages
+first (optional per-document scope), the model answers only from them, and its
+`[file p.45]` citations are clickable into the knowledge pane. The same local-only rule
+guards that path (`chat_completion` → `vision::ensure_local_endpoint`). The answer streams
+as `chat-event` events (token / done / error): the whole SSE body is read up front over
+blocking ureq, so per-token latency is bounded by the engine. The frontend holds
+`Thinking…` and reveals the answer in one go at `done`, because the tokens are fragments
+of the JSON reply and half an answer on screen reads worse than the wait. Raise
+`RAG_VISION_TIMEOUT` if the engine thinks slowly.
+
+![A Corpus chat: the answer is grounded in the source documents, every claim carries a clickable page citation, and the sessions panel on the right keeps each thread](screenshots/screen1.png)
+
+![The same chat renders tables and lists straight out of the source; sessions are named by the chat model from the topic and can be renamed](screenshots/screen2.png)
+
 ## Installing and running, plain English
 
 The short version, for anyone who just wants the app working:
@@ -283,22 +299,6 @@ Needs an existing index in the data dir.
 ```
 
 Source PDFs live wherever you keep them; pass the directory to `index`.
-
-## Chat in the GUI
-
-The window's chat answers from the same vision endpoint: each question retrieves passages
-first (optional per-document scope), the model answers only from them, and its
-`[file p.45]` citations are clickable into the knowledge pane. The same local-only rule
-guards that path (`chat_completion` → `vision::ensure_local_endpoint`). The answer streams
-as `chat-event` events (token / done / error): the whole SSE body is read up front over
-blocking ureq, so per-token latency is bounded by the engine. The frontend holds
-`Thinking…` and reveals the answer in one go at `done`, because the tokens are fragments
-of the JSON reply and half an answer on screen reads worse than the wait. Raise
-`RAG_VISION_TIMEOUT` if the engine thinks slowly.
-
-![A Corpus chat: the answer is grounded in the source documents, every claim carries a clickable page citation, and the sessions panel on the right keeps each thread](screenshots/screen1.png)
-
-![The same chat renders tables and lists straight out of the source; sessions are named by the chat model from the topic and can be renamed](screenshots/screen2.png)
 
 ## Connecting an inference engine (LM Studio and friends)
 
