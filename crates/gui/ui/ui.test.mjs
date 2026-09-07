@@ -764,6 +764,46 @@ test("mermaid blocks draw, or fall back to their source", async () => {
   assert.match(host.textContent, /diagram engine/, "and says so when the engine cannot run");
 });
 
+test("unquoted labels with brackets or line breaks get quoted before a redraw", async () => {
+  const { dom } = page([]);
+  await tick();
+  const repair = dom.window.repairMermaid;
+  assert.equal(
+    repair("graph TD; D --> E[Safety risk assessment\n(safety risk index)];"),
+    'graph TD; D --> E["Safety risk assessment (safety risk index)"];',
+  );
+  assert.equal(
+    repair("graph TD; E --> F{Intolerable?\nIndex 5A-5C};"),
+    'graph TD; E --> F{"Intolerable? Index 5A-5C"};',
+  );
+  assert.equal(
+    repair("graph TD; F -->|Yes| G[Take immediate action to mitigate];"),
+    "graph TD; F -->|Yes| G[Take immediate action to mitigate];",
+    "a clean label is left alone",
+  );
+  assert.equal(
+    repair('graph TD; A["(already quoted)"] --> B'),
+    'graph TD; A["(already quoted)"] --> B',
+    "a quoted label is not re-quoted",
+  );
+  assert.equal(
+    repair("graph TD; A[Runway]-->B[Stopway];"),
+    "graph TD; A[Runway]-->B[Stopway];",
+  );
+});
+
+test("the bomb error drawing is never trusted as a diagram", async () => {
+  const { dom } = page([]);
+  await tick();
+  const bomb = '<svg><text class="error-text">Syntax error in text</text></svg>';
+  const refusing = { render: () => Promise.resolve({ svg: bomb }) };
+  assert.equal(await dom.window.drawMermaid(refusing, "t", "x"), null);
+  const drawing = { render: () => Promise.resolve({ svg: "<svg><g/></svg>" }) };
+  assert.equal(await dom.window.drawMermaid(drawing, "t", "x"), "<svg><g/></svg>");
+  const broken = { render: () => Promise.reject(new Error("boom")) };
+  assert.equal(await dom.window.drawMermaid(broken, "t", "x"), null);
+});
+
 test("a failed chat shows the error in the transcript", async () => {
   const { dom } = page([], { chatError: "model returned 500: engine busy" });
   await tick();

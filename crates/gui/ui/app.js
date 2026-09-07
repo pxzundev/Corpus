@@ -1483,7 +1483,6 @@ function appendSvg(container, markup) {
 
 let mermaidLoader = null;
 let mermaidSeq = 0;
-
 /* Diagram colours come from the same tokens as the page, so a drawing cannot
  * be light-on-light after an OS theme switch. initialize is cheap and mermaid
  * re-reads it per render call, so appendMermaid refreshes before each draw. */
@@ -1539,8 +1538,101 @@ function loadMermaid() {
   return mermaidLoader;
 }
 
+/* Mermaid answers a syntax error with a bomb drawing instead of a rejection,
+ * so a "successful" render is checked for that drawing before it is trusted.
+ * Returns the svg text, or null when the engine refused. */
+function drawMermaid(engine, id, source) {
+  return engine
+    .render(id, source)
+    .then(({ svg }) => {
+      const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
+      const root = parsed.documentElement;
+      const ok =
+        root &&
+        root.nodeName.toLowerCase() === "svg" &&
+        !parsed.getElementsByTagName("parsererror").length &&
+        !parsed.querySelector(".error-text");
+      return ok ? svg : null;
+    })
+    .catch(() => null);
+}
+
+/* Mermaid's flowchart parser rejects unquoted labels that contain the shape
+ * brackets themselves — "(safety risk index)" inside "[...]" — and treats a
+ * newline inside a label as the end of the statement. Models emit both
+ * constantly, and quoting is what mermaid's own docs prescribe, so the
+ * repair pass quotes such labels before a second render attempt. */
+function repairMermaid(source) {
+  const OPENERS = { "[": "]", "(": ")", "{": "}", "((": "))" };
+  let out = "";
+  let i = 0;
+  const length = source.length;
+  while (i < length) {
+    const token = source.startsWith("((", i) ? "((" : source[i];
+    const closer = OPENERS[token];
+    if (!closer) {
+      out += token;
+      i += token.length;
+      continue;
+    }
+    // A shape bracket only counts as a label opener when a node id sits
+    // right before it (spaces are tolerated); anything else is syntax this
+    // pass does not understand, and copying it unchanged is safest.
+    let back = i - 1;
+    while (back >= 0 && (source[back] === " " || source[back] === "\t")) back -= 1;
+    if (back < 0 || !/[A-Za-z0-9_]/.test(source[back])) {
+      out += token;
+      i += token.length;
+      continue;
+    }
+    const opener = token;
+    let depth = 0;
+    let j = i;
+    let closed = false;
+    while (j < length) {
+      if (source[j] === '"') {
+        // A quoted label is already safe; skip it whole so brackets inside
+        // it cannot confuse the bracket counting.
+        const end = source.indexOf('"', j + 1);
+        j = end === -1 ? length : end + 1;
+        continue;
+      }
+      if (source.startsWith(opener, j)) {
+        depth += 1;
+        j += opener.length;
+        continue;
+      }
+      if (source.startsWith(closer, j)) {
+        depth -= 1;
+        j += closer.length;
+        if (depth === 0) {
+          closed = true;
+          break;
+        }
+        continue;
+      }
+      j += 1;
+    }
+    const raw = closed ? source.slice(i + opener.length, j - closer.length) : source.slice(i + opener.length);
+    const trimmed = raw.trim();
+    const alreadyQuoted = trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2;
+    if (alreadyQuoted || !/[(){}\[\]"\n\r;]/.test(raw)) {
+      out += token + raw + (closed ? closer : "");
+    } else {
+      // Newlines collapse to spaces (a quoted label may span lines), and an
+      // inner double quote becomes mermaid's #quot; escape.
+      const flat = raw.replace(/\s+/g, " ").trim();
+      out += token + '"' + flat.replace(/"/g, "#quot;") + '"' + (closed ? closer : "");
+    }
+    i = closed ? j : length;
+  }
+  return out;
+}
+
 /* The mermaid source reads as a code block until the engine answers; if it
- * never can, the source stays and says why. */
+ * never can, the source stays and says why. A syntax error is given one
+ * repaired second attempt — unquoted brackets in labels, labels spanning
+ * lines — before the fallback settles in. */
 function appendMermaid(container, source) {
   const host = document.createElement("div");
   host.className = "chat-mermaid";
@@ -1557,9 +1649,13 @@ function appendMermaid(container, source) {
       // Re-read the palette per draw: the OS can switch themes while the
       // window is open, and a cached light palette draws light-on-light.
       engine.initialize(mermaidConfig());
-      return engine.render(`rag-mmd-${(mermaidSeq += 1)}`, source);
+      const id = `rag-mmd-${(mermaidSeq += 1)}`;
+      return drawMermaid(engine, id, source).then((drawn) =>
+        drawn ?? drawMermaid(engine, id, repairMermaid(source)),
+      );
     })
-    .then(({ svg }) => {
+    .then((svg) => {
+      if (!svg) throw new Error("mermaid could not draw this source");
       const parsed = new DOMParser().parseFromString(svg, "image/svg+xml");
       const root = parsed.documentElement;
       if (
