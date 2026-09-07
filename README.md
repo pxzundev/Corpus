@@ -71,9 +71,12 @@ To pick up changes later: `git pull && cargo build --release --workspace`.
 
 ## Installing on Windows
 
-Same story — build from source. These steps assume PowerShell. (A downloaded
-release zip with `install.ps1` inside can place `corpus` and `corpus-mcp` for you
-without any build — see [Using the MCP server from a client](#using-the-mcp-server-from-a-client).)
+Build from source, or grab the release zip: `Corpus-v0.1.0-windows-x64.zip` on the
+[releases page](https://github.com/pxzundev/Corpus/releases) contains `corpus-gui.exe`,
+`corpus.exe` and `corpus-mcp.exe` plus `install.ps1`, and needs no build. These
+steps assume PowerShell. (The zip's `install.ps1` can place `corpus` and `corpus-mcp`
+for you without any build — see
+[Using the MCP server from a client](#using-the-mcp-server-from-a-client).)
 
 ```powershell
 # 1. Install a recent stable Rust toolchain (the workspace uses edition 2024)
@@ -137,10 +140,11 @@ The short version, for anyone who just wants the app working:
 
 ### Windows
 
-1. **Get the binaries.** The Windows release zip is planned for a later release; for
-   now, build from source following [Installing on Windows](#installing-on-windows)
-   above, or unzip a folder that contains `corpus-gui.exe`, `corpus.exe` and
-   `corpus-mcp.exe`.
+1. **Get the binaries.** Download the release zip (`Corpus-v0.1.0-windows-x64.zip`)
+   from the [releases page](https://github.com/pxzundev/Corpus/releases) and unzip it,
+   or build from source following [Installing on Windows](#installing-on-windows)
+   above. Either way you end up with a folder that contains `corpus-gui.exe`,
+   `corpus.exe` and `corpus-mcp.exe`.
 2. **Put the exe files somewhere.** Any folder works — say `Documents\Corpus` — or
    run `install.ps1` for the CLI tools. No installation step is required for the
    GUI: a folder with the exes in it is enough.
@@ -416,8 +420,9 @@ produces `Corpus.app` and `Corpus_0.1.0_aarch64.dmg` under `target/release/bundl
 built binary into `crates/gui/resources/` (gitignored) and the GUI places it in the data
 folder on first launch, so the app is self-contained: no separate CLI install for MCP
 connectivity. The bundle is ad-hoc signed (no developer certificate), so Gatekeeper
-asks for a confirm on first open — right-click → Open, once. Windows and Linux have no
-installer; build from source as above.
+asks for a confirm on first open — right-click → Open, once. Windows ships as a
+folder-of-exes zip from the release (see above); Linux has no installer yet —
+build from source as above.
 
 ## License
 
