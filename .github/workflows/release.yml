@@ -49,9 +49,34 @@ jobs:
       # corpus-mcp first: the GUI build script validates the bundled resource
       # path, so the server binary must exist before corpus-gui compiles.
       - name: Build the workspace
+        shell: bash
         run: |
-          cargo build --release -p corpus-mcp
-          cargo build --release --workspace
+          set -o pipefail
+          cargo build --release -p corpus-mcp 2>&1 | tee mcp-build.log
+          cargo build --release --workspace 2>&1 | tee workspace-build.log
+      - name: Surface the build errors in the job summary
+        if: failure()
+        shell: bash
+        run: |
+          {
+            echo '### corpus-mcp build (error lines and tail)'
+            grep -nE "error(\[E[0-9]+\])?:|error occurred|could not compile|failed to run" mcp-build.log || echo '(no matches)'
+            tail -n 30 mcp-build.log
+            echo
+            echo '### workspace build (error lines and tail)'
+            grep -nE "error(\[E[0-9]+\])?:|error occurred|could not compile|failed to run" workspace-build.log || echo '(no matches)'
+            tail -n 40 workspace-build.log
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the build logs on the ci-logs branch
+        if: failure()
+        shell: bash
+        run: |
+          git config user.name "corpus-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b ci-logs
+          git add mcp-build.log workspace-build.log
+          git commit -m "windows build logs for ${GITHUB_REF_NAME}"
+          git push --force origin ci-logs
       - name: Package the Windows zip
         shell: pwsh
         run: |
