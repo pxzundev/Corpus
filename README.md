@@ -14,6 +14,39 @@ total, are downloaded automatically on first run and cached in the data director
 after that everything is offline and instant. There is no cloud service, no account, no
 telemetry.
 
+total, are downloaded automatically on first run and cached in the data directory, so
+after that everything is offline and instant. There is no cloud service, no account, no
+telemetry.
+
+## About this app
+
+What Corpus does, in everyday terms:
+
+- **Answers are grounded in your documents, not invented.** Every answer Corpus gives is
+  built from passages in the PDFs you indexed, and each claim links back to the page it
+  came from — click the citation and the source document opens on that page. When a
+  document doesn't contain the answer, Corpus says so instead of making something up.
+- **Easy to use.** Install the app once, drag your PDFs into the window, and ask questions
+  in plain language. The main flow needs no commands and no configuration: what you see is
+  your library, the search results behind every answer, and the conversation.
+- **Strictly local.** Everything happens on your own computer. The index, the models, your
+  documents, your questions and your answers never leave the machine — no cloud service,
+  no account, no telemetry. After the one-time model download, Corpus works fully offline.
+- **You bring the chat engine.** Corpus doesn't include an AI language model of its own;
+  it connects to an inference engine you run locally (LM Studio, Ollama-compatible
+  servers, or any OpenAI-compatible endpoint on your machine), and it only ever talks to
+  such an engine on your own computer. Indexing and search work without any engine; only
+  conversational answers need one.
+- **Other AI assistants can use your library too.** Corpus speaks MCP (the protocol that
+  connects AI assistants to tools), so Claude Desktop, Codex, or any MCP client on your
+  machine can search your documents with the same grounded, cited results — through a
+  local server that ships with the app.
+- **One folder holds everything.** The models, the index, the settings and the MCP server
+  copy all live in a single Corpus data folder. Delete the app and that folder, and
+  nothing of Corpus remains on the machine.
+
+Corpus is open source (MIT) and free to use.
+
 ## Installing and running, plain English
 
 The short version, for anyone who just wants the app working:
