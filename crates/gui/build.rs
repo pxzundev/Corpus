@@ -28,6 +28,13 @@ fn main() {
         }
     }
     fs::copy(&source, &dest).expect("could not copy corpus-mcp into the GUI resources dir");
+    // The bundler only runs on macOS, but tauri-build validates the resource
+    // path from the config (`resources/corpus-mcp`, no extension) on every
+    // platform, so Windows also needs the extensionless copy.
+    if name != "corpus-mcp" {
+        fs::copy(&source, dest_dir.join("corpus-mcp"))
+            .expect("could not copy corpus-mcp (extensionless) for resource validation");
+    }
     println!("cargo:rerun-if-changed={}", source.display());
 
     tauri_build::build();
