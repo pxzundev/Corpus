@@ -296,6 +296,10 @@ blocking ureq, so per-token latency is bounded by the engine. The frontend holds
 of the JSON reply and half an answer on screen reads worse than the wait. Raise
 `RAG_VISION_TIMEOUT` if the engine thinks slowly.
 
+![A Corpus chat: the answer is grounded in the source documents, every claim carries a clickable page citation, and the sessions panel on the right keeps each thread](screenshots/screen1.png)
+
+![The same chat renders tables and lists straight out of the source; sessions are named by the chat model from the topic and can be renamed](screenshots/screen2.png)
+
 ## Connecting an inference engine (LM Studio and friends)
 
 Corpus ships no model server. Chat in the GUI and figure captioning both talk to an
