@@ -250,6 +250,57 @@ impl ChatSession {
     }
 }
 
+/// Naming prompt for a chat's first exchange: the chat model itself names the
+/// chat from its topic (NotebookLM style), instead of the question's own
+/// possibly long opening.
+const TITLE_SYSTEM_PROMPT: &str = "You name chat sessions from their topic. Reply with \
+only the title: at most five words, a single line, no quotes, no trailing period.";
+
+/// A short title for a chat's first exchange, written by the chat model from
+/// the question ("Finance", not the whole sentence). Best effort: any failure
+/// yields None and the caller keeps the question's own words as the title.
+pub fn infer_title(config: &VisionConfig, question: &str) -> Option<String> {
+    let body = json!({
+        "model": config.model,
+        "messages": [
+            {"role": "system", "content": TITLE_SYSTEM_PROMPT},
+            {"role": "user", "content": question},
+        ],
+        "max_tokens": 64,
+        "stream": false,
+    });
+    let raw = crate::vision::chat(config, body).ok()?;
+    clean_title(&raw)
+}
+
+/// One line, unquoted, at most five words — "Provisional tax instalments",
+/// not an essay, and never empty: an empty or decorative reply falls back to
+/// the caller's question-derived title.
+fn clean_title(raw: &str) -> Option<String> {
+    let line = raw.lines().next().unwrap_or_default().trim();
+    let line = line.trim_matches(|c| {
+        matches!(c, '"' | '\'' | '\u{2018}' | '\u{2019}' | '\u{201c}' | '\u{201d}' | '*' | '#')
+    });
+    let mut words: Vec<&str> = Vec::new();
+    let mut chars = 0;
+    for word in line.split_whitespace() {
+        let extra = word.chars().count() + if words.is_empty() { 0 } else { 1 };
+        if words.len() == 5 || chars + extra > 48 {
+            break;
+        }
+        words.push(word);
+        chars += extra;
+    }
+    let title = words.join(" ");
+    // A run of punctuation or symbols is not a title; the question's own
+    // words are better than an asterisk.
+    if !title.chars().any(char::is_alphanumeric) {
+        None
+    } else {
+        Some(title)
+    }
+}
+
 /// One step of a chat answer, streamed to the GUI.
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -625,6 +676,22 @@ mod tests {
         assert!(long.ends_with('…'));
         assert!(!long.ends_with(" …"));
         assert_eq!(ChatSession::title_from("  padded  "), "padded");
+    }
+
+    #[test]
+    fn a_model_title_is_trimmed_to_five_plain_words() {
+        assert_eq!(
+            clean_title("\"Provisional tax instalments and the GST ratio method\""),
+            Some("Provisional tax instalments and the".to_string()),
+        );
+        assert_eq!(clean_title("**Finance**"), Some("Finance".to_string()));
+        assert_eq!(
+            clean_title("Provisional tax\nsecond line ignored"),
+            Some("Provisional tax".to_string()),
+            "only the first line becomes the title",
+        );
+        assert_eq!(clean_title(""), None, "an empty reply keeps the question's own words");
+        assert_eq!(clean_title("* * *"), None, "decorative replies are not titles");
     }
 
     #[test]

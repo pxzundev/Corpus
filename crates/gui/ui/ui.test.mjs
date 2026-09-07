@@ -74,6 +74,12 @@ function page(calls, options = {}) {
   const dom = new JSDOM(html, { runScripts: "outside-only", pretendToBeVisual: true });
   // jsdom has no scrollIntoView; a citation click calls it to centre the card.
   dom.window.Element.prototype.scrollIntoView = () => {};
+  // jsdom's HTMLInputElement.select() may not move the DOM selection; the
+  // harness mirrors the browser's semantics so the pre-select is testable.
+  dom.window.HTMLInputElement.prototype.select = function () {
+    this.selectionStart = 0;
+    this.selectionEnd = this.value.length;
+  };
   const emitted = [];
   // The chats the backend still has on disk: new adds one, delete drops one, so
   // the picker cannot keep offering a chat that was just removed.
@@ -81,6 +87,10 @@ function page(calls, options = {}) {
   // Delete is a soft delete here, mirroring the backend's trash folder:
   // restore moves a chat out of this set and back into saved.
   const trashed = new Set();
+  // Chats the GUI created during the run, newest first — the backend lists
+  // them again on every loadSessions, with the model-chosen title and turn
+  // count once an exchange has been persisted.
+  const created = [];
   // A command that answers in the same tick can never be caught with its busy
   // indicator up, so the slow paths are delayed per command name.
   const later = (value, ms) =>
@@ -136,6 +146,11 @@ function page(calls, options = {}) {
             captionFailures: options.captionFailures ?? 0,
           });
         if (name === "vision_settings") return Promise.resolve(options.vision ?? VISION);
+        if (name === "vision_models") {
+          return options.visionModelsError
+            ? Promise.reject(new Error(options.visionModelsError))
+            : Promise.resolve(options.visionModels ?? ["glm-5.2", "qwen3-vl"]);
+        }
         if (name === "save_vision_settings")
           return Promise.resolve({
             enabled: args.enabled ?? false,
@@ -174,6 +189,15 @@ function page(calls, options = {}) {
         if (name === "open_source") return Promise.resolve(null);
         if (name === "chat_completion") {
           const question = args.question;
+          // The backend persists the exchange to the session it names, and a
+          // first turn names the chat from its topic.
+          const target =
+            created.find((session) => session.id === args.sessionId) ??
+            (options.sessions ?? []).find((session) => session.id === args.sessionId);
+          if (target) {
+            if (target.turns === 0) target.title = options.inferredTitle ?? target.title;
+            target.turns = (target.turns ?? 0) + 2;
+          }
           if (options.chatError) {
             return Promise.reject(new Error(options.chatError));
           }
@@ -212,7 +236,10 @@ function page(calls, options = {}) {
           return Promise.resolve(null);
         }
         if (name === "list_chat_sessions")
-          return Promise.resolve((options.sessions ?? []).filter((session) => saved.has(session.id)));
+          return Promise.resolve([
+            ...created,
+            ...(options.sessions ?? []).filter((session) => saved.has(session.id)),
+          ]);
         if (name === "new_chat_session") {
           const session = options.newSession ?? {
             id: "new-1",
@@ -227,6 +254,7 @@ function page(calls, options = {}) {
             state: "active",
           };
           saved.add(session.id);
+          created.unshift({ id: session.id, title: session.title, turns: 0 });
           return Promise.resolve(session);
         }
         if (name === "load_chat_session")
@@ -247,11 +275,15 @@ function page(calls, options = {}) {
         if (name === "rename_chat_session") {
           const session = options.sessions?.find((item) => item.id === args.id);
           if (session) session.title = args.title;
+          const fresh = created.find((item) => item.id === args.id);
+          if (fresh) fresh.title = args.title;
           return Promise.resolve(null);
         }
         if (name === "delete_chat_session") {
           saved.delete(args.id);
           trashed.add(args.id);
+          const fresh = created.find((item) => item.id === args.id);
+          if (fresh) created.splice(created.indexOf(fresh), 1);
           return Promise.resolve(null);
         }
         if (name === "restore_chat_session") {
@@ -577,6 +609,24 @@ const submitChat = (dom, question) => {
     .dispatchEvent(new dom.window.Event("submit", { bubbles: true, cancelable: true }));
 };
 
+test("chatting with no sessions starts one, and the model names it from the topic", async () => {
+  const calls = [];
+  const { dom } = page(calls, { inferredTitle: "Provisional tax instalments" });
+  await tick();
+  submitChat(dom, "what is provisional tax instalment?");
+  await tick();
+
+  const order = calls.map((call) => call.name);
+  const made = order.indexOf("new_chat_session");
+  const answered = order.indexOf("chat_completion");
+  assert.ok(made !== -1 && answered !== -1 && made < answered, "the session exists before the turn is answered");
+  assert.equal(calls.find((call) => call.name === "chat_completion").args.sessionId, "new-1");
+
+  // The picker repaints from the backend: the model's title, the real turns.
+  assert.equal(text(dom, ".session .session-title"), "Provisional tax instalments");
+  assert.match(text(dom, ".session .session-turns"), /2 turns/);
+});
+
 test("chat answers with rendered markdown and clickable citations", async () => {
   const calls = [];
   const { dom } = page(calls);
@@ -587,7 +637,7 @@ test("chat answers with rendered markdown and clickable citations", async () => 
   const chat = calls.find((call) => call.name === "chat_completion");
   assert.equal(chat.args.question, "what is the climb gradient?");
   assert.equal(chat.args.documents, null, "the whole index grounds an unticked question");
-  assert.equal(chat.args.sessionId, null, "no session yet, so the turn is not persisted");
+  assert.equal(chat.args.sessionId, "new-1", "no saved sessions, so the turn lands in a fresh one");
   assert.equal(
     chat.args.history,
     null,
@@ -742,6 +792,7 @@ test("stop cancels the answer in flight and drops its reply", async () => {
   const { dom } = page(calls, { slow: { chat: 700 } });
   await tick();
   submitChat(dom, "visual dva holding");
+  await tick();
   assert.equal(doc(dom).querySelector("#chat-send").textContent, "Stop", "send turns into stop");
   click(dom, "#chat-send");
   await tick();
@@ -1211,6 +1262,15 @@ test("renaming asks first, then renames only the chat that is open", async () =>
   assert.match(text(dom, "#toast"), /renamed/i);
 });
 
+test("the rename dialog starts with the title fully selected", async () => {
+  const { dom } = page([], { sessions: [{ id: "c-1", title: "Gradient questions", turns: 2 }] });
+  await tick();
+  click(dom, ".session-edit");
+  const input = doc(dom).querySelector("#chat-rename-input");
+  assert.equal(input.selectionStart, 0, "the caret is at the start, not mid-text");
+  assert.equal(input.selectionEnd, input.value.length, "typing replaces the whole title");
+});
+
 test("deleting a chat drops it from the picker and shows what is left", async () => {
   const calls = [];
   const { dom } = page(calls, {
@@ -1436,22 +1496,34 @@ test("vision settings load into the panel", async () => {
   await tick();
   assert.equal(doc(dom).querySelector("#vision-enabled").checked, true);
   assert.equal(doc(dom).querySelector("#vision-url").value, "http://127.0.0.1:11234/v1");
-  assert.equal(doc(dom).querySelector("#vision-model").value, "qwen3-vl");
   // A stored key is never echoed back into a readable field.
   assert.equal(doc(dom).querySelector("#vision-key").value, "");
   assert.match(doc(dom).querySelector("#vision-key").placeholder, /saved/);
 });
 
-test("missing PDFium is stated with the settings, not after an ingest", async () => {
-  const { dom } = page([], { vision: { ...VISION, pdfium: false } });
+test("the vision model is a dropdown fed by the endpoint's own list", async () => {
+  const { dom } = page([]);
   await tick();
-  assert.match(
-    doc(dom).querySelector("#vision-note").textContent,
-    /PDFium is not installed/,
+  const select = doc(dom).querySelector("#vision-model");
+  assert.equal(select.hidden, false, "the listing arrived, so the dropdown shows");
+  assert.equal(doc(dom).querySelector("#vision-model-manual").hidden, true);
+  assert.deepEqual(
+    [...select.options].map((option) => option.value),
+    ["glm-5.2", "qwen3-vl"],
   );
+  assert.equal(select.value, "qwen3-vl", "the saved model is what the dropdown shows");
 });
 
-test("editing a vision field saves it", async () => {
+test("an unreachable endpoint keeps the model box typeable", async () => {
+  const { dom } = page([], { visionModelsError: "connection refused" });
+  await tick();
+  const manual = doc(dom).querySelector("#vision-model-manual");
+  assert.equal(manual.hidden, false, "the typed box is the fallback");
+  assert.equal(manual.value, "qwen3-vl", "the saved model survives a failed listing");
+  assert.equal(doc(dom).querySelector("#vision-model").hidden, true);
+});
+
+test("editing the endpoint saves it and refetches the model list", async () => {
   const calls = [];
   const { dom } = page(calls);
   await tick();
@@ -1462,6 +1534,18 @@ test("editing a vision field saves it", async () => {
   const saved = calls.find((call) => call.name === "save_vision_settings");
   assert.equal(saved.args.baseUrl, "http://192.168.0.9:8000/v1");
   assert.equal(saved.args.enabled, true);
+  assert.equal(saved.args.model, "qwen3-vl", "the dropdown's selection is what saves");
+  const lists = calls.filter((call) => call.name === "vision_models");
+  assert.equal(lists.length, 2, "once at open, once after the endpoint changed");
+});
+
+test("missing PDFium is stated with the settings, not after an ingest", async () => {
+  const { dom } = page([], { vision: { ...VISION, pdfium: false } });
+  await tick();
+  assert.match(
+    doc(dom).querySelector("#vision-note").textContent,
+    /PDFium is not installed/,
+  );
 });
 
 test("the vision test reports what the model actually saw", async () => {

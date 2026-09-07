@@ -498,6 +498,17 @@ async fn test_vision(state: State<'_, Arc<AppState>>) -> Result<String, String> 
         .map_err(|error| format!("{error:#}"))
 }
 
+/// The model ids the endpoint advertises, for the vision sheet's dropdown.
+#[tauri::command]
+async fn vision_models(state: State<'_, Arc<AppState>>) -> Result<Vec<String>, String> {
+    let settings = VisionSettings::load(&state.paths).map_err(|error| format!("{error:#}"))?;
+    let config = settings.config();
+    tauri::async_runtime::spawn_blocking(move || vision::list_models(&config))
+        .await
+        .map_err(|error| error.to_string())?
+        .map_err(|error| format!("{error:#}"))
+}
+
 /// Chat over the indexed corpus, answered by the same local model that captions
 /// figures. Retrieval runs fresh each turn; the conversation so far travels
 /// with the question as context. The answer streams as `chat-event` events
@@ -582,9 +593,16 @@ async fn chat_completion(
         if !session_id.is_empty() {
             let mut session = ChatSession::load(&state.paths, &session_id)
                 .map_err(|error| format!("{error:#}"))?;
+            let first_turn = session.turns.is_empty();
             session.push_question(&question);
             if let (Some(answer), Some(sources)) = (saved_answer, saved_sources) {
                 session.push_answer(&answer, sources);
+            }
+            if first_turn {
+                // The chat model names the chat from its topic; a failed
+                // naming call keeps the question's own words as the title.
+                session.title = chat::infer_title(&settings.config(), &question)
+                    .unwrap_or_else(|| ChatSession::title_from(&question));
             }
             session.save(&state.paths).map_err(|error| format!("{error:#}"))?;
         }
@@ -1066,6 +1084,7 @@ pub fn run() {
             vision_settings,
             save_vision_settings,
             test_vision,
+            vision_models,
             mcp_config,
             commit_ingest,
             chat_completion,

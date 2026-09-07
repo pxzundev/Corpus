@@ -164,7 +164,8 @@ const nodes = {
   visionDone: el("vision-done"),
   visionEnabled: el("vision-enabled"),
   visionUrl: el("vision-url"),
-  visionModel: el("vision-model"),
+  visionModelSelect: el("vision-model"),
+  visionModelManual: el("vision-model-manual"),
   visionKey: el("vision-key"),
   visionTest: el("vision-test"),
   visionNote: el("vision-note"),
@@ -845,12 +846,18 @@ async function loadVision() {
     const settings = await invoke("vision_settings");
     nodes.visionEnabled.checked = Boolean(settings.enabled);
     nodes.visionUrl.value = settings.baseUrl ?? "";
-    nodes.visionModel.value = settings.model ?? "";
+    // The model box is a dropdown fed by the endpoint's own listing; until that
+    // listing answers, the typed box is what shows, so nothing is lost.
+    nodes.visionModelManual.value = settings.model ?? "";
+    nodes.visionModelManual.hidden = false;
+    nodes.visionModelSelect.hidden = true;
+    nodes.visionModelSelect.replaceChildren();
     nodes.visionKey.value = "";
     nodes.visionKey.placeholder = settings.apiKeySet
       ? "saved — type a new one to replace it"
       : "only if the endpoint needs one";
     renderVisionState(settings);
+    await refreshVisionModels();
     if (!settings.pdfium) {
       visionNote(
         "PDFium is not installed, so figures cannot be rasterised or captioned. " +
@@ -865,12 +872,47 @@ async function loadVision() {
   }
 }
 
+/// Fill the dropdown from `GET {endpoint}/models`. The saved model always has
+/// an entry even if the server stopped advertising it, so switching engines
+/// does not silently rewrite the setting. Any failure — engine down, no such
+/// path — puts the typed box back instead.
+async function refreshVisionModels() {
+  try {
+    const models = await invoke("vision_models");
+    if (!models.length) throw new Error("the endpoint lists no models");
+    const select = nodes.visionModelSelect;
+    select.replaceChildren();
+    const saved = nodes.visionModelManual.value.trim();
+    for (const id of models) {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = id;
+      select.append(option);
+    }
+    if (saved && !models.includes(saved)) {
+      const option = document.createElement("option");
+      option.value = saved;
+      option.textContent = saved;
+      select.append(option);
+    }
+    select.value = saved && models.includes(saved) ? saved : (models[0] ?? "");
+    select.hidden = false;
+    nodes.visionModelManual.hidden = true;
+  } catch (error) {
+    nodes.visionModelManual.hidden = false;
+    nodes.visionModelSelect.hidden = true;
+  }
+}
+
 async function saveVision() {
   try {
     const settings = await invoke("save_vision_settings", {
       enabled: nodes.visionEnabled.checked,
       baseUrl: nodes.visionUrl.value,
-      model: nodes.visionModel.value,
+      model:
+        nodes.visionModelSelect.hidden
+          ? nodes.visionModelManual.value
+          : nodes.visionModelSelect.value,
       // An empty box means "keep what is stored", which the backend enforces.
       apiKey: nodes.visionKey.value,
     });
@@ -1795,6 +1837,18 @@ function openTextDialog(prompt, value, handler) {
   renameHandler = handler;
   openDialog(nodes.chatRenameDialog);
   nodes.chatRenameInput.focus();
+  // The whole title starts selected: typing replaces it instead of splicing
+  // into the middle of the old name.
+  const input = nodes.chatRenameInput;
+  if (typeof input.select === "function") {
+    try {
+      input.select();
+    } catch (error) {
+      try {
+        input.setSelectionRange(0, input.value.length);
+      } catch (ignored) {}
+    }
+  }
 }
 
 function openRenameDialog(id, title) {
@@ -1889,6 +1943,10 @@ async function sendChat(event) {
   const question = nodes.chatInput.value.trim();
   if (!question || chatBusy) return;
 
+  // Chatting with no saved sessions starts one on the spot, so the exchange
+  // lands on disk and the chat model names it from the topic.
+  if (!currentSessionId) await newChat();
+
   chatBusy = true;
   setSendStop(true);
   nodes.chatInput.value = "";
@@ -1931,6 +1989,9 @@ async function sendChat(event) {
     setSendStop(false);
     nodes.chatSend.disabled = false;
     nodes.chatLog.setAttribute("aria-busy", "false");
+    // The backend names a first-turn chat from the topic, so the picker's
+    // titles and turn counts are only true after a reload of them.
+    await loadSessions();
     scrollChatToBottom();
     nodes.chatInput.focus();
   }
@@ -2177,8 +2238,10 @@ nodes.visionDialog.addEventListener("cancel", () => {
   loadVision();
 });
 nodes.visionEnabled.addEventListener("change", saveVision);
-nodes.visionUrl.addEventListener("change", saveVision);
-nodes.visionModel.addEventListener("change", saveVision);
+nodes.visionUrl.addEventListener("change", () => {
+  saveVision().then(refreshVisionModels);
+});
+nodes.visionModelSelect.addEventListener("change", saveVision);
 nodes.visionKey.addEventListener("change", saveVision);
 nodes.visionTest.addEventListener("click", testVision);
 nodes.captionYes.addEventListener("click", () => commitCaption(true));

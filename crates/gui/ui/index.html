@@ -194,7 +194,8 @@
         </div>
         <div class="sheet-field">
           <label for="vision-model">Model</label>
-          <input type="text" id="vision-model" spellcheck="false" autocomplete="off"
+          <select id="vision-model" aria-describedby="vision-model-hint" hidden></select>
+          <input type="text" id="vision-model-manual" spellcheck="false" autocomplete="off"
                  placeholder="the id your server reports" aria-describedby="vision-model-hint" />
           <small id="vision-model-hint">What a server advertises as “vision” is not
             evidence. Test the model sends a real image and shows the answer.</small>

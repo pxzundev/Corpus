@@ -433,7 +433,8 @@ button {
 
 input[type="text"],
 input[type="search"],
-input[type="password"] {
+input[type="password"],
+select {
   height: var(--control-h);
   padding: 0 var(--space-3);
   border: 1px solid var(--color-border-strong);
@@ -441,6 +442,22 @@ input[type="password"] {
   background: var(--color-card);
   color: var(--color-fg);
   font: 13px/1 var(--font-sans);
+}
+
+select {
+  height: var(--control-h);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-fg);
+  font: 13px/1 var(--font-sans);
+  width: 100%;
+}
+
+select option {
+  background: var(--color-card);
+  color: var(--color-fg);
 }
 
 input::placeholder {
@@ -1542,7 +1559,8 @@ input[type="search"] {
   color: var(--color-muted-fg);
 }
 
-.sheet-field input {
+.sheet-field input,
+.sheet-field select {
   width: 100%;
 }
 

@@ -121,6 +121,46 @@ fn host_without_port(host: &str) -> &str {
     host.rsplit_once(':').map(|(h, _)| h).unwrap_or(host)
 }
 
+/// The model ids the endpoint advertises (`GET {base_url}/models`), sorted.
+/// Local-only like every other request out of this machine. The GUI offers
+/// these as the model dropdown; a listing failure leaves the typed box in
+/// place, so a custom id is never locked out.
+pub fn list_models(config: &VisionConfig) -> Result<Vec<String>> {
+    let url = format!("{}/models", config.base_url.trim_end_matches('/'));
+    ensure_local_endpoint(&url)?;
+    let request = ureq::get(&url)
+        .config()
+        // A listing is quick; a slow engine must not stall the sheet for the
+        // full caption timeout.
+        .timeout_global(Some(std::time::Duration::from_secs(15)))
+        .build();
+    let mut response = request
+        .call()
+        .with_context(|| format!("request to {url} failed"))?;
+    let status = response.status();
+    let text = response.body_mut().read_to_string().unwrap_or_default();
+    if status != 200 {
+        bail!(
+            "model list returned {status}: {}",
+            text.chars().take(200).collect::<String>()
+        );
+    }
+    let parsed: serde_json::Value =
+        serde_json::from_str(&text).with_context(|| "model list returned non-JSON")?;
+    let mut ids: Vec<String> = parsed["data"]
+        .as_array()
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(|entry| entry["id"].as_str().map(|id| id.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    ids.sort();
+    ids.dedup();
+    Ok(ids)
+}
+
 /// Prompt text, versioned because a caption cache keyed only on the page image
 /// would keep serving captions made by an outdated prompt. Bump this whenever
 /// the wording below changes.
@@ -302,6 +342,19 @@ mod tests {
         ensure_local_endpoint("http://localhost:8000/v1").unwrap();
         assert!(ensure_local_endpoint("https://api.openai.com/v1").is_err());
         assert!(ensure_local_endpoint("https://8.8.8.8/v1").is_err());
+    }
+
+    #[test]
+    fn the_model_listing_guard_refuses_public_endpoints_too() {
+        let config = VisionConfig {
+            base_url: "https://api.openai.com/v1".to_string(),
+            api_key: String::new(),
+            model: "gpt-x".to_string(),
+            timeout_secs: 600,
+        };
+        // The guard runs before any request, so this never touches the network.
+        let error = list_models(&config).unwrap_err().to_string();
+        assert!(error.contains("refusing a non-local endpoint"));
     }
 
     #[test]
